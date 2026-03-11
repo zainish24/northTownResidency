@@ -67,9 +67,10 @@ export class SMSService {
     return response.ok
   }
 
-  // Telenor API (Update with actual endpoint when available)
+  // Telenor API
   private async sendViaTelenor(phone: string, message: string): Promise<boolean> {
-    const response = await fetch('https://telenor-api-endpoint.com/send', {
+    // Replace with actual Telenor API endpoint
+    const response = await fetch('https://telenor-sms-api.com/api/send', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.config.apiKey}`,
@@ -81,6 +82,9 @@ export class SMSService {
         sender: this.config.senderId,
       }),
     })
+    
+    const data = await response.json()
+    console.log('Telenor SMS Response:', data)
     return response.ok
   }
 
