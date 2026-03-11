@@ -31,7 +31,7 @@ const SETTINGS_CATEGORIES = [
   { id: 'content', label: 'Content', icon: FileText },
   { id: 'seo', label: 'SEO', icon: TrendingUp },
   { id: 'security', label: 'Security', icon: Shield },
-  { id: 'email', label: 'Email', icon: Mail },
+  { id: 'email', label: 'OTP/SMS', icon: Mail },
   { id: 'payment', label: 'Payment', icon: CreditCard },
 ]
 
@@ -87,13 +87,12 @@ export default function SiteSettingsPage() {
     session_timeout: 30,
     max_login_attempts: 5,
     
-    // Email
-    smtp_host: '',
-    smtp_port: 587,
-    smtp_user: '',
-    smtp_password: '',
-    from_email: 'noreply@ntrproperties.pk',
-    from_name: 'NTR Properties',
+    // OTP/SMS
+    sms_provider: 'mock',
+    sms_api_key: '',
+    sms_sender_id: 'NTR',
+    twilio_account_sid: '',
+    twilio_auth_token: '',
     
     // Payment
     currency: 'PKR',
@@ -878,33 +877,49 @@ export default function SiteSettingsPage() {
             </Card>
           </TabsContent>
 
-          {/* Email Settings */}
+          {/* OTP/SMS Settings */}
           <TabsContent value="email" className="space-y-6">
             <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
               <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 pb-4">
                 <CardTitle className="flex items-center gap-2">
-                  <Mail className="h-5 w-5 text-emerald-600" />
-                  Email Configuration
+                  <MessageSquare className="h-5 w-5 text-emerald-600" />
+                  OTP/SMS Configuration
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 space-y-4">
+                <div>
+                  <Label>SMS Provider</Label>
+                  <select 
+                    value={settings.sms_provider || 'mock'}
+                    onChange={(e) => handleInputChange('sms_provider', e.target.value)}
+                    className="w-full mt-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  >
+                    <option value="mock">Mock (Testing)</option>
+                    <option value="twilio">Twilio</option>
+                    <option value="unifonic">Unifonic</option>
+                    <option value="eocean">Eocean</option>
+                    <option value="telenor">Telenor</option>
+                    <option value="jazz">Jazz</option>
+                  </select>
+                  <p className="text-xs text-slate-500 mt-1">Select your SMS provider for OTP delivery</p>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>SMTP Host</Label>
+                    <Label>API Key / Phone Number</Label>
                     <Input 
-                      value={settings.smtp_host} 
-                      onChange={(e) => handleInputChange('smtp_host', e.target.value)}
-                      placeholder="smtp.gmail.com"
+                      value={settings.sms_api_key || ''} 
+                      onChange={(e) => handleInputChange('sms_api_key', e.target.value)}
+                      placeholder="Your API key or Twilio phone number"
                       className="mt-1"
                     />
                   </div>
                   <div>
-                    <Label>SMTP Port</Label>
+                    <Label>Sender ID</Label>
                     <Input 
-                      type="number"
-                      value={settings.smtp_port} 
-                      onChange={(e) => handleInputChange('smtp_port', parseInt(e.target.value))}
-                      placeholder="587"
+                      value={settings.sms_sender_id || 'NTR'} 
+                      onChange={(e) => handleInputChange('sms_sender_id', e.target.value)}
+                      placeholder="NTR"
                       className="mt-1"
                     />
                   </div>
@@ -912,44 +927,38 @@ export default function SiteSettingsPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>SMTP Username</Label>
+                    <Label>Twilio Account SID (if using Twilio)</Label>
                     <Input 
-                      value={settings.smtp_user} 
-                      onChange={(e) => handleInputChange('smtp_user', e.target.value)}
-                      placeholder="user@example.com"
+                      value={settings.twilio_account_sid || ''} 
+                      onChange={(e) => handleInputChange('twilio_account_sid', e.target.value)}
+                      placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                       className="mt-1"
                     />
                   </div>
                   <div>
-                    <Label>SMTP Password</Label>
+                    <Label>Twilio Auth Token (if using Twilio)</Label>
                     <Input 
                       type="password"
-                      value={settings.smtp_password} 
-                      onChange={(e) => handleInputChange('smtp_password', e.target.value)}
+                      value={settings.twilio_auth_token || ''} 
+                      onChange={(e) => handleInputChange('twilio_auth_token', e.target.value)}
                       placeholder="••••••••"
                       className="mt-1"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>From Email</Label>
-                    <Input 
-                      value={settings.from_email} 
-                      onChange={(e) => handleInputChange('from_email', e.target.value)}
-                      placeholder="noreply@ntrproperties.pk"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label>From Name</Label>
-                    <Input 
-                      value={settings.from_name} 
-                      onChange={(e) => handleInputChange('from_name', e.target.value)}
-                      placeholder="NTR Properties"
-                      className="mt-1"
-                    />
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex gap-3">
+                    <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-blue-900">
+                      <p className="font-medium mb-1">SMS Provider Setup:</p>
+                      <ul className="list-disc list-inside space-y-1 text-xs">
+                        <li><strong>Mock:</strong> For testing - OTP shown in console</li>
+                        <li><strong>Twilio:</strong> Free $15 credit - Get from twilio.com</li>
+                        <li><strong>Eocean:</strong> Pakistani provider - eocean.us</li>
+                        <li><strong>Unifonic:</strong> Middle East provider</li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
               </CardContent>
