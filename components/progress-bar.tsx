@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, Suspense } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
-export function ProgressBar() {
+function ProgressBarContent() {
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [visible, setVisible] = useState(false)
@@ -71,6 +71,14 @@ export function ProgressBar() {
         {Math.round(progress)}%
       </div>
     </div>
+  )
+}
+
+export function ProgressBar() {
+  return (
+    <Suspense fallback={null}>
+      <ProgressBarContent />
+    </Suspense>
   )
 }
 

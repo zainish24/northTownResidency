@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, Suspense } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -32,7 +32,7 @@ interface ListingsFiltersProps {
   propertyTypes?: any[]
 }
 
-export function ListingsFilters({ phases, blocks, amenities, propertyTypes = [] }: ListingsFiltersProps) {
+function ListingsFiltersContent({ phases, blocks, amenities, propertyTypes = [] }: ListingsFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isOpen, setIsOpen] = useState(true)
@@ -444,5 +444,14 @@ export function ListingsFilters({ phases, blocks, amenities, propertyTypes = [] 
         </CardContent>
       )}
     </Card>
+  )
+}
+
+
+export function ListingsFilters({ phases, blocks, amenities, propertyTypes = [] }: ListingsFiltersProps) {
+  return (
+    <Suspense fallback={<div className="border-0 shadow-lg rounded-xl overflow-hidden sticky top-24 h-96 bg-slate-50 animate-pulse" />}>
+      <ListingsFiltersContent phases={phases} blocks={blocks} amenities={amenities} propertyTypes={propertyTypes} />
+    </Suspense>
   )
 }
