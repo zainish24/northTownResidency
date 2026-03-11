@@ -1,0 +1,1053 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { 
+  Settings, Save, Loader2, Facebook, Instagram, Phone, Mail, MessageSquare,
+  Globe, Shield, Bell, Eye, EyeOff, Download, Upload, RefreshCw,
+  CheckCircle, XCircle, AlertCircle, Info, HelpCircle, Moon, Sun,
+  Smartphone, Tablet, Laptop, Monitor, Zap, Clock, Calendar,
+  Users, Building2, MapPin, Home, Store, Image as ImageIcon,
+  FileText, Link2, Lock, Key, CreditCard, DollarSign, Percent,
+  TrendingUp, BarChart3, PieChart, Activity, Award, Star,
+  ChevronRight, ChevronLeft, Menu, X, Plus, Edit, Trash2,
+  Linkedin, Youtube
+} from 'lucide-react'
+import { toast } from 'sonner'
+
+const SETTINGS_CATEGORIES = [
+  { id: 'general', label: 'General', icon: Globe },
+  { id: 'contact', label: 'Contact', icon: Phone },
+  { id: 'social', label: 'Social Media', icon: Facebook },
+  { id: 'content', label: 'Content', icon: FileText },
+  { id: 'seo', label: 'SEO', icon: TrendingUp },
+  { id: 'security', label: 'Security', icon: Shield },
+  { id: 'email', label: 'Email', icon: Mail },
+  { id: 'payment', label: 'Payment', icon: CreditCard },
+]
+
+export default function SiteSettingsPage() {
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [activeTab, setActiveTab] = useState('general')
+  const [notificationCount, setNotificationCount] = useState(0)
+  const [settings, setSettings] = useState({
+    // General - map to database keys
+    platform_name: 'NTR Properties',
+    tagline: 'North Town Residency Classified Ads',
+    logo_url: '',
+    favicon_url: '',
+    watermark_url: '',
+    primary_color: '#10b981',
+    secondary_color: '#3b82f6',
+    timezone: 'Asia/Karachi',
+    date_format: 'DD/MM/YYYY',
+    
+    // Contact
+    contact_phone: '+92 300 1234567',
+    contact_phone_2: '',
+    contact_email: 'info@ntrproperties.pk',
+    whatsapp_number: '+923001234567',
+    support_hours: '24/7',
+    address: 'North Town Residency, Karachi',
+    map_url: '',
+    
+    // Social
+    facebook_url: 'https://facebook.com/ntrproperties',
+    instagram_url: 'https://instagram.com/ntrproperties',
+    twitter_url: '',
+    linkedin_url: '',
+    youtube_url: '',
+    
+    // Content
+    about_us: 'NTR Properties is the premier platform for buying, selling, and renting properties in North Town Residency, Karachi.',
+    terms_conditions: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit...',
+    privacy_policy: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit...',
+    footer_text: '© 2024 NTR Properties. All rights reserved.',
+    
+    // SEO
+    meta_title: 'NTR Properties - North Town Residency Karachi',
+    meta_description: 'Find residential plots, commercial shops, and properties in North Town Residency Karachi.',
+    meta_keywords: 'NTR, North Town Residency, Karachi property, real estate',
+    google_analytics_id: '',
+    google_site_verification: '',
+    
+    // Security
+    enable_captcha: true,
+    enable_2fa: false,
+    session_timeout: 30,
+    max_login_attempts: 5,
+    
+    // Email
+    smtp_host: '',
+    smtp_port: 587,
+    smtp_user: '',
+    smtp_password: '',
+    from_email: 'noreply@ntrproperties.pk',
+    from_name: 'NTR Properties',
+    
+    // Payment
+    currency: 'PKR',
+    tax_rate: 0,
+    stripe_public_key: '',
+    stripe_secret_key: '',
+    easypaisa_enabled: true,
+    jazzcash_enabled: true,
+  })
+
+  useEffect(() => {
+    fetchSettings()
+    loadNotificationCount()
+  }, [])
+
+  const loadNotificationCount = async () => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { count } = await supabase
+      .from('user_notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('is_read', false)
+    
+    setNotificationCount(count || 0)
+  }
+
+  const fetchSettings = async () => {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('site_settings')
+      .select('setting_key, setting_value')
+
+    if (data) {
+      // Convert array to object
+      const settingsObj: any = {}
+      data.forEach(item => {
+        settingsObj[item.setting_key] = item.setting_value || ''
+      })
+      setSettings(prev => ({ ...prev, ...settingsObj }))
+    }
+    setLoading(false)
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    const supabase = createClient()
+    
+    try {
+      // Update each setting individually
+      const updates = Object.entries(settings).map(async ([key, value]) => {
+        const { error } = await supabase
+          .from('site_settings')
+          .upsert({ 
+            setting_key: key, 
+            setting_value: String(value),
+            label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            category: 'general'
+          }, { onConflict: 'setting_key' })
+        
+        if (error) {
+          console.error(`Error updating ${key}:`, error)
+          throw error
+        }
+      })
+      
+      await Promise.all(updates)
+      toast.success('Settings saved successfully')
+      
+      // Refresh to verify
+      setTimeout(() => fetchSettings(), 500)
+    } catch (error: any) {
+      toast.error('Failed to save settings: ' + error.message)
+      console.error('Save error:', error)
+    }
+    setSaving(false)
+  }
+
+
+
+  const handleInputChange = (field: string, value: any) => {
+    setSettings(prev => ({ ...prev, [field]: value }))
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/20 to-blue-600/20 rounded-full blur-3xl"></div>
+          <div className="relative w-20 h-20 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
+        </div>
+        <p className="mt-6 text-slate-600 font-medium">Loading settings...</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+      {/* Header */}
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-40 backdrop-blur-xl bg-white/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-600 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200">
+                <Settings className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-slate-900">Site Settings</h1>
+                <p className="text-xs text-slate-500">Configure your platform preferences</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5 text-slate-600" />
+                {notificationCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
+                    {notificationCount}
+                  </span>
+                )}
+              </Button>
+              <div className="flex items-center gap-2 pl-3 border-l border-slate-200">
+                <Avatar className="h-8 w-8 bg-emerald-600">
+                  <AvatarFallback className="bg-emerald-600 text-white">AD</AvatarFallback>
+                </Avatar>
+                <div className="hidden md:block">
+                  <p className="text-sm font-medium text-slate-900">Admin User</p>
+                  <p className="text-xs text-slate-500">Super Admin</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Quick Actions */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+          <Button 
+            onClick={fetchSettings}
+            className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
+          <Button 
+            onClick={handleSave} 
+            disabled={saving} 
+            className="bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white gap-2 shadow-lg"
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            {saving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
+
+        {/* Settings Categories Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="bg-white border border-slate-200 p-1 h-auto flex-wrap">
+            {SETTINGS_CATEGORIES.map(cat => {
+              const Icon = cat.icon
+              return (
+                <TabsTrigger 
+                  key={cat.id} 
+                  value={cat.id}
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-600 data-[state=active]:to-blue-600 data-[state=active]:text-white px-4 py-2"
+                >
+                  <Icon className="h-4 w-4 mr-2" />
+                  {cat.label}
+                </TabsTrigger>
+              )
+            })}
+          </TabsList>
+
+          {/* General Settings */}
+          <TabsContent value="general" className="space-y-6">
+            <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 pb-4">
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5 text-emerald-600" />
+                  General Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                {/* Logo Upload */}
+                <div>
+                  <Label>Platform Logo</Label>
+                  <div className="mt-2 flex items-center gap-6">
+                    <div className="w-24 h-24 bg-slate-100 rounded-xl flex items-center justify-center border-2 border-dashed border-slate-300">
+                      {settings.logo_url ? (
+                        <img src={settings.logo_url} alt="Logo" className="max-w-full max-h-full object-contain" />
+                      ) : (
+                        <ImageIcon className="h-8 w-8 text-slate-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <div className="relative">
+                        <Input 
+                          type="file"
+                          accept="image/*"
+                          id="logo-upload"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            
+                            const supabase = createClient()
+                            const fileName = `logo-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '-')}`
+                            
+                            const { data, error } = await supabase.storage
+                              .from('property-images')
+                              .upload(`logos/${fileName}`, file)
+                            
+                            if (error) {
+                              toast.error('Failed to upload logo')
+                              return
+                            }
+                            
+                            const { data: { publicUrl } } = supabase.storage
+                              .from('property-images')
+                              .getPublicUrl(`logos/${fileName}`)
+                            
+                            handleInputChange('logo_url', publicUrl)
+                            toast.success('Logo uploaded successfully')
+                          }}
+                          className="hidden"
+                        />
+                        <Button 
+                          type="button"
+                          variant="outline" 
+                          onClick={() => document.getElementById('logo-upload')?.click()}
+                          className="w-full border-2 border-dashed border-emerald-300 hover:border-emerald-500 hover:bg-emerald-50 transition-all"
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Choose Logo File
+                        </Button>
+                      </div>
+                      <Input 
+                        value={settings.logo_url} 
+                        onChange={(e) => handleInputChange('logo_url', e.target.value)}
+                        placeholder="Or paste URL: https://example.com/logo.png"
+                      />
+                      <p className="text-xs text-slate-500">Recommended size: 200x50px</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Favicon Upload */}
+                <div>
+                  <Label>Favicon (Browser Icon)</Label>
+                  <div className="mt-2 flex items-center gap-6">
+                    <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center border-2 border-dashed border-slate-300">
+                      {settings.favicon_url ? (
+                        <img src={settings.favicon_url} alt="Favicon" className="max-w-full max-h-full object-contain" />
+                      ) : (
+                        <ImageIcon className="h-6 w-6 text-slate-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <div className="relative">
+                        <Input 
+                          type="file"
+                          accept="image/*"
+                          id="favicon-upload"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            
+                            const supabase = createClient()
+                            const fileName = `favicon-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '-')}`
+                            
+                            const { data, error } = await supabase.storage
+                              .from('property-images')
+                              .upload(`logos/${fileName}`, file)
+                            
+                            if (error) {
+                              toast.error('Failed to upload favicon')
+                              return
+                            }
+                            
+                            const { data: { publicUrl } } = supabase.storage
+                              .from('property-images')
+                              .getPublicUrl(`logos/${fileName}`)
+                            
+                            handleInputChange('favicon_url', publicUrl)
+                            toast.success('Favicon uploaded successfully')
+                          }}
+                          className="hidden"
+                        />
+                        <Button 
+                          type="button"
+                          variant="outline" 
+                          onClick={() => document.getElementById('favicon-upload')?.click()}
+                          className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 hover:bg-blue-50 transition-all"
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Choose Favicon File
+                        </Button>
+                      </div>
+                      <Input 
+                        value={settings.favicon_url} 
+                        onChange={(e) => handleInputChange('favicon_url', e.target.value)}
+                        placeholder="Or paste URL: https://example.com/favicon.ico"
+                      />
+                      <p className="text-xs text-slate-500">Recommended size: 32x32px or 64x64px</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Watermark Upload */}
+                <div>
+                  <Label>Watermark</Label>
+                  <div className="mt-2 flex items-center gap-6">
+                    <div className="w-24 h-24 bg-slate-100 rounded-xl flex items-center justify-center border-2 border-dashed border-slate-300">
+                      {settings.watermark_url ? (
+                        <img src={settings.watermark_url} alt="Watermark" className="max-w-full max-h-full object-contain" />
+                      ) : (
+                        <ImageIcon className="h-8 w-8 text-slate-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <div className="relative">
+                        <Input 
+                          type="file"
+                          accept="image/*"
+                          id="watermark-upload"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            
+                            const supabase = createClient()
+                            const fileName = `watermark-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '-')}`
+                            
+                            const { data, error } = await supabase.storage
+                              .from('property-images')
+                              .upload(`logos/${fileName}`, file)
+                            
+                            if (error) {
+                              toast.error('Failed to upload watermark')
+                              return
+                            }
+                            
+                            const { data: { publicUrl } } = supabase.storage
+                              .from('property-images')
+                              .getPublicUrl(`logos/${fileName}`)
+                            
+                            handleInputChange('watermark_url', publicUrl)
+                            toast.success('Watermark uploaded successfully')
+                          }}
+                          className="hidden"
+                        />
+                        <Button 
+                          type="button"
+                          variant="outline" 
+                          onClick={() => document.getElementById('watermark-upload')?.click()}
+                          className="w-full border-2 border-dashed border-purple-300 hover:border-purple-500 hover:bg-purple-50 transition-all"
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Choose Watermark File
+                        </Button>
+                      </div>
+                      <Input 
+                        value={settings.watermark_url} 
+                        onChange={(e) => handleInputChange('watermark_url', e.target.value)}
+                        placeholder="Or paste URL: https://example.com/watermark.png"
+                      />
+                      <p className="text-xs text-slate-500">Recommended: PNG with transparency</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Platform Name</Label>
+                    <Input 
+                      value={settings.platform_name} 
+                      onChange={(e) => handleInputChange('platform_name', e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label>Tagline</Label>
+                    <Input 
+                      value={settings.tagline} 
+                      onChange={(e) => handleInputChange('tagline', e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Primary Color</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input 
+                        value={settings.primary_color} 
+                        onChange={(e) => handleInputChange('primary_color', e.target.value)}
+                      />
+                      <div className="w-10 h-10 rounded-lg" style={{ backgroundColor: settings.primary_color }} />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Secondary Color</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input 
+                        value={settings.secondary_color} 
+                        onChange={(e) => handleInputChange('secondary_color', e.target.value)}
+                      />
+                      <div className="w-10 h-10 rounded-lg" style={{ backgroundColor: settings.secondary_color }} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Timezone</Label>
+                    <Input 
+                      value={settings.timezone} 
+                      onChange={(e) => handleInputChange('timezone', e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label>Date Format</Label>
+                    <Input 
+                      value={settings.date_format} 
+                      onChange={(e) => handleInputChange('date_format', e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Contact Settings */}
+          <TabsContent value="contact" className="space-y-6">
+            <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 pb-4">
+                <CardTitle className="flex items-center gap-2">
+                  <Phone className="h-5 w-5 text-emerald-600" />
+                  Contact Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-emerald-600" />
+                      Contact Phone
+                    </Label>
+                    <Input 
+                      value={settings.contact_phone} 
+                      onChange={(e) => handleInputChange('contact_phone', e.target.value)}
+                      placeholder="+92 300 1234567"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-slate-400" />
+                      Contact Phone 2 (Optional)
+                    </Label>
+                    <Input 
+                      value={settings.contact_phone_2} 
+                      onChange={(e) => handleInputChange('contact_phone_2', e.target.value)}
+                      placeholder="+92 321 1234567"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-green-600" />
+                      WhatsApp Number
+                    </Label>
+                    <Input 
+                      value={settings.whatsapp_number} 
+                      onChange={(e) => handleInputChange('whatsapp_number', e.target.value)}
+                      placeholder="+923001234567"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-emerald-600" />
+                      Contact Email
+                    </Label>
+                    <Input 
+                      value={settings.contact_email} 
+                      onChange={(e) => handleInputChange('contact_email', e.target.value)}
+                      placeholder="info@ntrproperties.pk"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Office Address</Label>
+                  <Textarea 
+                    rows={2}
+                    value={settings.address} 
+                    onChange={(e) => handleInputChange('address', e.target.value)}
+                    placeholder="North Town Residency, Karachi"
+                    className="mt-1"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Social Media Settings */}
+          <TabsContent value="social" className="space-y-6">
+            <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 pb-4">
+                <CardTitle className="flex items-center gap-2">
+                  <Facebook className="h-5 w-5 text-emerald-600" />
+                  Social Media Links
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <Facebook className="h-4 w-4 text-blue-600" />
+                      Facebook URL
+                    </Label>
+                    <Input 
+                      value={settings.facebook_url} 
+                      onChange={(e) => handleInputChange('facebook_url', e.target.value)}
+                      placeholder="https://facebook.com/ntrproperties"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <Instagram className="h-4 w-4 text-pink-600" />
+                      Instagram URL
+                    </Label>
+                    <Input 
+                      value={settings.instagram_url} 
+                      onChange={(e) => handleInputChange('instagram_url', e.target.value)}
+                      placeholder="https://instagram.com/ntrproperties"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <svg className="h-4 w-4 text-sky-600" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                      </svg>
+                      X (Twitter) URL
+                    </Label>
+                    <Input 
+                      value={settings.twitter_url} 
+                      onChange={(e) => handleInputChange('twitter_url', e.target.value)}
+                      placeholder="https://twitter.com/ntrproperties"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <Linkedin className="h-4 w-4 text-blue-700" />
+                      LinkedIn URL
+                    </Label>
+                    <Input 
+                      value={settings.linkedin_url} 
+                      onChange={(e) => handleInputChange('linkedin_url', e.target.value)}
+                      placeholder="https://linkedin.com/company/ntrproperties"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="flex items-center gap-2">
+                    <Youtube className="h-4 w-4 text-red-600" />
+                    YouTube URL
+                  </Label>
+                  <Input 
+                    value={settings.youtube_url} 
+                    onChange={(e) => handleInputChange('youtube_url', e.target.value)}
+                    placeholder="https://youtube.com/@ntrproperties"
+                    className="mt-1"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Content Settings */}
+          <TabsContent value="content" className="space-y-6">
+            <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 pb-4">
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-emerald-600" />
+                  Site Content
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                <div>
+                  <Label>About Us</Label>
+                  <Textarea 
+                    rows={6}
+                    value={settings.about_us} 
+                    onChange={(e) => handleInputChange('about_us', e.target.value)}
+                    placeholder="Tell users about your platform..."
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label>Terms & Conditions</Label>
+                  <Textarea 
+                    rows={8}
+                    value={settings.terms_conditions} 
+                    onChange={(e) => handleInputChange('terms_conditions', e.target.value)}
+                    placeholder="Enter terms and conditions..."
+                    className="mt-1 font-mono text-sm"
+                  />
+                </div>
+
+                <div>
+                  <Label>Privacy Policy</Label>
+                  <Textarea 
+                    rows={8}
+                    value={settings.privacy_policy} 
+                    onChange={(e) => handleInputChange('privacy_policy', e.target.value)}
+                    placeholder="Enter privacy policy..."
+                    className="mt-1 font-mono text-sm"
+                  />
+                </div>
+
+                <div>
+                  <Label>Footer Text</Label>
+                  <Input 
+                    value={settings.footer_text} 
+                    onChange={(e) => handleInputChange('footer_text', e.target.value)}
+                    placeholder="© 2024 NTR Properties. All rights reserved."
+                    className="mt-1"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* SEO Settings */}
+          <TabsContent value="seo" className="space-y-6">
+            <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 pb-4">
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-emerald-600" />
+                  SEO & Analytics
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                <div>
+                  <Label>Meta Title</Label>
+                  <Input 
+                    value={settings.meta_title} 
+                    onChange={(e) => handleInputChange('meta_title', e.target.value)}
+                    placeholder="NTR Properties - North Town Residency Karachi"
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Recommended: 50-60 characters</p>
+                </div>
+
+                <div>
+                  <Label>Meta Description</Label>
+                  <Textarea 
+                    rows={3}
+                    value={settings.meta_description} 
+                    onChange={(e) => handleInputChange('meta_description', e.target.value)}
+                    placeholder="Find residential plots, commercial shops, and properties in North Town Residency Karachi."
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Recommended: 150-160 characters</p>
+                </div>
+
+                <div>
+                  <Label>Meta Keywords</Label>
+                  <Input 
+                    value={settings.meta_keywords} 
+                    onChange={(e) => handleInputChange('meta_keywords', e.target.value)}
+                    placeholder="NTR, North Town Residency, Karachi property, real estate"
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Comma separated keywords</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Google Analytics ID</Label>
+                    <Input 
+                      value={settings.google_analytics_id} 
+                      onChange={(e) => handleInputChange('google_analytics_id', e.target.value)}
+                      placeholder="G-XXXXXXXXXX"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label>Google Site Verification</Label>
+                    <Input 
+                      value={settings.google_site_verification} 
+                      onChange={(e) => handleInputChange('google_site_verification', e.target.value)}
+                      placeholder="google-site-verification=..."
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Security Settings */}
+          <TabsContent value="security" className="space-y-6">
+            <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 pb-4">
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-emerald-600" />
+                  Security Configuration
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <Shield className="h-5 w-5 text-emerald-600" />
+                    <div>
+                      <p className="font-medium text-slate-900">Enable CAPTCHA</p>
+                      <p className="text-xs text-slate-500">Protect forms from spam</p>
+                    </div>
+                  </div>
+                  <Switch 
+                    checked={settings.enable_captcha}
+                    onCheckedChange={(checked) => handleInputChange('enable_captcha', checked)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <Lock className="h-5 w-5 text-emerald-600" />
+                    <div>
+                      <p className="font-medium text-slate-900">Enable Two-Factor Auth</p>
+                      <p className="text-xs text-slate-500">Require 2FA for admin accounts</p>
+                    </div>
+                  </div>
+                  <Switch 
+                    checked={settings.enable_2fa}
+                    onCheckedChange={(checked) => handleInputChange('enable_2fa', checked)}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Session Timeout (minutes)</Label>
+                    <Input 
+                      type="number"
+                      value={settings.session_timeout} 
+                      onChange={(e) => handleInputChange('session_timeout', parseInt(e.target.value))}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label>Max Login Attempts</Label>
+                    <Input 
+                      type="number"
+                      value={settings.max_login_attempts} 
+                      onChange={(e) => handleInputChange('max_login_attempts', parseInt(e.target.value))}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Email Settings */}
+          <TabsContent value="email" className="space-y-6">
+            <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 pb-4">
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-emerald-600" />
+                  Email Configuration
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>SMTP Host</Label>
+                    <Input 
+                      value={settings.smtp_host} 
+                      onChange={(e) => handleInputChange('smtp_host', e.target.value)}
+                      placeholder="smtp.gmail.com"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label>SMTP Port</Label>
+                    <Input 
+                      type="number"
+                      value={settings.smtp_port} 
+                      onChange={(e) => handleInputChange('smtp_port', parseInt(e.target.value))}
+                      placeholder="587"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>SMTP Username</Label>
+                    <Input 
+                      value={settings.smtp_user} 
+                      onChange={(e) => handleInputChange('smtp_user', e.target.value)}
+                      placeholder="user@example.com"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label>SMTP Password</Label>
+                    <Input 
+                      type="password"
+                      value={settings.smtp_password} 
+                      onChange={(e) => handleInputChange('smtp_password', e.target.value)}
+                      placeholder="••••••••"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>From Email</Label>
+                    <Input 
+                      value={settings.from_email} 
+                      onChange={(e) => handleInputChange('from_email', e.target.value)}
+                      placeholder="noreply@ntrproperties.pk"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label>From Name</Label>
+                    <Input 
+                      value={settings.from_name} 
+                      onChange={(e) => handleInputChange('from_name', e.target.value)}
+                      placeholder="NTR Properties"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Payment Settings */}
+          <TabsContent value="payment" className="space-y-6">
+            <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 pb-4">
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-emerald-600" />
+                  Payment Configuration
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Currency</Label>
+                    <Input 
+                      value={settings.currency} 
+                      onChange={(e) => handleInputChange('currency', e.target.value)}
+                      placeholder="PKR"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label>Tax Rate (%)</Label>
+                    <Input 
+                      type="number"
+                      value={settings.tax_rate} 
+                      onChange={(e) => handleInputChange('tax_rate', parseFloat(e.target.value))}
+                      placeholder="0"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Stripe Public Key</Label>
+                    <Input 
+                      value={settings.stripe_public_key} 
+                      onChange={(e) => handleInputChange('stripe_public_key', e.target.value)}
+                      placeholder="pk_live_..."
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label>Stripe Secret Key</Label>
+                    <Input 
+                      type="password"
+                      value={settings.stripe_secret_key} 
+                      onChange={(e) => handleInputChange('stripe_secret_key', e.target.value)}
+                      placeholder="sk_live_..."
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                        <span className="text-emerald-600 font-bold">EP</span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-900">Easypaisa</p>
+                        <p className="text-xs text-slate-500">Enable Easypaisa payments</p>
+                      </div>
+                    </div>
+                    <Switch 
+                      checked={settings.easypaisa_enabled}
+                      onCheckedChange={(checked) => handleInputChange('easypaisa_enabled', checked)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <span className="text-orange-600 font-bold">JC</span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-900">JazzCash</p>
+                        <p className="text-xs text-slate-500">Enable JazzCash payments</p>
+                      </div>
+                    </div>
+                    <Switch 
+                      checked={settings.jazzcash_enabled}
+                      onCheckedChange={(checked) => handleInputChange('jazzcash_enabled', checked)}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  )
+}

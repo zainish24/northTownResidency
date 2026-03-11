@@ -1,0 +1,113 @@
+/* Admin Panel Compact Design */
+.admin-panel {
+  font-size: 0.875rem;
+}
+
+.admin-panel h1 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.75rem;
+}
+
+.admin-panel h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5rem;
+}
+
+.admin-panel h3 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+}
+
+.admin-panel h4 {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+}
+
+.admin-panel p {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.admin-panel .text-xl {
+  font-size: 1.125rem !important;
+  line-height: 1.75rem !important;
+}
+
+.admin-panel .text-2xl {
+  font-size: 1.25rem !important;
+  line-height: 1.75rem !important;
+}
+
+.admin-panel .text-3xl {
+  font-size: 1.5rem !important;
+  line-height: 2rem !important;
+}
+
+.admin-panel .text-base {
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
+}
+
+.admin-panel .text-sm {
+  font-size: 0.8125rem !important;
+  line-height: 1.125rem !important;
+}
+
+.admin-panel .text-xs {
+  font-size: 0.75rem !important;
+  line-height: 1rem !important;
+}
+
+.admin-panel table th {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.admin-panel table td {
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.admin-panel button {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.admin-panel input,
+.admin-panel textarea,
+.admin-panel select {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.admin-panel label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.125rem;
+}
+
+/* Card spacing */
+.admin-panel .card {
+  padding: 1rem;
+}
+
+/* Compact spacing */
+.admin-panel .space-y-6 > * + * {
+  margin-top: 1.25rem !important;
+}
+
+.admin-panel .space-y-4 > * + * {
+  margin-top: 0.875rem !important;
+}
+
+/* Badge sizing */
+.admin-panel .badge {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.5rem;
+}
