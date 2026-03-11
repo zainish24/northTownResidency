@@ -3,7 +3,7 @@
 // make sure phases, blocks, listings, listing_images tables have RLS disabled
 // you can run the QUICK_FIX.sql script in Supabase SQL editor to disable row level security
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,7 @@ import { ArrowLeft, ArrowRight, Upload, X, Sparkles, Building2, MapPin, Home, St
 import { getIconComponent } from '@/lib/icon'
 import type { Phase, Block } from '@/lib/types'
 
-export default function PostListingPage() {
+function PostListingContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const editId = searchParams.get('edit')
@@ -731,5 +731,14 @@ export default function PostListingPage() {
         </div>
       </div>
     </>
+  )
+}
+
+
+export default function PostListingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 animate-pulse" />}>
+      <PostListingContent />
+    </Suspense>
   )
 }
