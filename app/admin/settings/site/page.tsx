@@ -20,9 +20,11 @@ import {
   FileText, Link2, Lock, Key, CreditCard, DollarSign, Percent,
   TrendingUp, BarChart3, PieChart, Activity, Award, Star,
   ChevronRight, ChevronLeft, Menu, X, Plus, Edit, Trash2,
-  Linkedin, Youtube
+  Linkedin, Youtube, Camera
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { DatabaseUsageTab } from '@/components/admin/database-usage-tab'
+import { OTPUsageTab } from '@/components/admin/otp-usage-tab'
 
 const SETTINGS_CATEGORIES = [
   { id: 'general', label: 'General', icon: Globe },
@@ -32,8 +34,6 @@ const SETTINGS_CATEGORIES = [
   { id: 'seo', label: 'SEO', icon: TrendingUp },
   { id: 'security', label: 'Security', icon: Shield },
   { id: 'email', label: 'OTP/SMS', icon: Mail },
-  { id: 'payment', label: 'Payment', icon: CreditCard },
-  { id: 'setup', label: 'DB Setup', icon: Settings },
   { id: 'database', label: 'Usage', icon: BarChart3 },
 ]
 
@@ -937,225 +937,14 @@ export default function SiteSettingsPage() {
           </TabsContent>
 
           {/* OTP/SMS Settings */}
+          {/* OTP/SMS Usage Tab */}
           <TabsContent value="email" className="space-y-6">
-            <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 pb-4">
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-emerald-600" />
-                  OTP/SMS Configuration
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6 space-y-4">
-                <div>
-                  <Label>SMS Provider</Label>
-                  <select 
-                    value={settings.sms_provider || 'mock'}
-                    onChange={(e) => handleInputChange('sms_provider', e.target.value)}
-                    className="w-full mt-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                  >
-                    <option value="mock">Mock (Testing)</option>
-                    <option value="twilio">Twilio</option>
-                    <option value="unifonic">Unifonic</option>
-                    <option value="eocean">Eocean</option>
-                    <option value="telenor">Telenor</option>
-                    <option value="jazz">Jazz</option>
-                  </select>
-                  <p className="text-xs text-slate-500 mt-1">Select your SMS provider for OTP delivery</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>API Key / Phone Number</Label>
-                    <Input 
-                      value={settings.sms_api_key || ''} 
-                      onChange={(e) => handleInputChange('sms_api_key', e.target.value)}
-                      placeholder="Your API key or Twilio phone number"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label>Sender ID</Label>
-                    <Input 
-                      value={settings.sms_sender_id || 'NTR'} 
-                      onChange={(e) => handleInputChange('sms_sender_id', e.target.value)}
-                      placeholder="NTR"
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Twilio Account SID (if using Twilio)</Label>
-                    <Input 
-                      value={settings.twilio_account_sid || ''} 
-                      onChange={(e) => handleInputChange('twilio_account_sid', e.target.value)}
-                      placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label>Twilio Auth Token (if using Twilio)</Label>
-                    <Input 
-                      type="password"
-                      value={settings.twilio_auth_token || ''} 
-                      onChange={(e) => handleInputChange('twilio_auth_token', e.target.value)}
-                      placeholder="••••••••"
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex gap-3">
-                    <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm text-blue-900">
-                      <p className="font-medium mb-1">SMS Provider Setup:</p>
-                      <ul className="list-disc list-inside space-y-1 text-xs">
-                        <li><strong>Mock:</strong> For testing - OTP shown in console</li>
-                        <li><strong>Twilio:</strong> Free $15 credit - Get from twilio.com</li>
-                        <li><strong>Eocean:</strong> Pakistani provider - eocean.us</li>
-                        <li><strong>Unifonic:</strong> Middle East provider</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <OTPUsageTab />
           </TabsContent>
 
           {/* Payment Settings */}
-          <TabsContent value="payment" className="space-y-6">
-            <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 pb-4">
-                <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-emerald-600" />
-                  Payment Configuration
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Currency</Label>
-                    <Input 
-                      value={settings.currency} 
-                      onChange={(e) => handleInputChange('currency', e.target.value)}
-                      placeholder="PKR"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label>Tax Rate (%)</Label>
-                    <Input 
-                      type="number"
-                      value={settings.tax_rate} 
-                      onChange={(e) => handleInputChange('tax_rate', parseFloat(e.target.value))}
-                      placeholder="0"
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Stripe Public Key</Label>
-                    <Input 
-                      value={settings.stripe_public_key} 
-                      onChange={(e) => handleInputChange('stripe_public_key', e.target.value)}
-                      placeholder="pk_live_..."
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label>Stripe Secret Key</Label>
-                    <Input 
-                      type="password"
-                      value={settings.stripe_secret_key} 
-                      onChange={(e) => handleInputChange('stripe_secret_key', e.target.value)}
-                      placeholder="sk_live_..."
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                        <span className="text-emerald-600 font-bold">EP</span>
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-900">Easypaisa</p>
-                        <p className="text-xs text-slate-500">Enable Easypaisa payments</p>
-                      </div>
-                    </div>
-                    <Switch 
-                      checked={settings.easypaisa_enabled}
-                      onCheckedChange={(checked) => handleInputChange('easypaisa_enabled', checked)}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <span className="text-orange-600 font-bold">JC</span>
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-900">JazzCash</p>
-                        <p className="text-xs text-slate-500">Enable JazzCash payments</p>
-                      </div>
-                    </div>
-                    <Switch 
-                      checked={settings.jazzcash_enabled}
-                      onCheckedChange={(checked) => handleInputChange('jazzcash_enabled', checked)}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           {/* Database Usage Tab */}
           <TabsContent value="database" className="space-y-6">
-            {/* Current Plan Card */}
-            <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 pb-4">
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5 text-emerald-600" />
-                  Current Plan
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h3 className="text-2xl font-bold text-slate-900">{dbStats.plan} Plan</h3>
-                    <p className="text-sm text-slate-600">Perfect for getting started</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-3xl font-bold text-emerald-600">$0</p>
-                    <p className="text-xs text-slate-500">per month</p>
-                  </div>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Clock className="h-4 w-4 text-blue-600" />
-                    <p className="text-sm font-medium text-blue-900">Trial Period</p>
-                  </div>
-                  <p className="text-xs text-blue-700">{dbStats.daysLeft} days remaining in your free trial</p>
-                </div>
-
-                <Button 
-                  className="w-full bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white rounded-lg"
-                  onClick={() => window.open('https://supabase.com/dashboard/project/_/settings/billing', '_blank')}
-                >
-                  <Zap className="h-4 w-4 mr-2" />
-                  Upgrade on Supabase
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Usage Statistics */}
             <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
               <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 pb-4">
                 <CardTitle className="flex items-center gap-2">
@@ -1163,216 +952,158 @@ export default function SiteSettingsPage() {
                   Database Usage
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6 space-y-6">
-                {/* Listings */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Home className="h-4 w-4 text-emerald-600" />
-                      <span className="text-sm font-medium text-slate-700">Listings</span>
-                    </div>
-                    <span className="text-sm font-bold text-slate-900">{dbStats.listings} / 100</span>
-                  </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2">
-                    <div 
-                      className="bg-gradient-to-r from-emerald-600 to-emerald-500 h-2 rounded-full transition-all"
-                      style={{ width: `${Math.min((dbStats.listings / 100) * 100, 100)}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">{100 - dbStats.listings} listings remaining</p>
-                </div>
-
-                {/* Users */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium text-slate-700">Users</span>
-                    </div>
-                    <span className="text-sm font-bold text-slate-900">{dbStats.users} / 50</span>
-                  </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2">
-                    <div 
-                      className="bg-gradient-to-r from-blue-600 to-blue-500 h-2 rounded-full transition-all"
-                      style={{ width: `${Math.min((dbStats.users / 50) * 100, 100)}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">{50 - dbStats.users} users remaining</p>
-                </div>
-
-                {/* Images */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Camera className="h-4 w-4 text-purple-600" />
-                      <span className="text-sm font-medium text-slate-700">Images</span>
-                    </div>
-                    <span className="text-sm font-bold text-slate-900">{dbStats.images} / 500</span>
-                  </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2">
-                    <div 
-                      className="bg-gradient-to-r from-purple-600 to-purple-500 h-2 rounded-full transition-all"
-                      style={{ width: `${Math.min((dbStats.images / 500) * 100, 100)}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">{500 - dbStats.images} images remaining</p>
-                </div>
-
-                {/* Storage */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <ImageIcon className="h-4 w-4 text-amber-600" />
-                      <span className="text-sm font-medium text-slate-700">Storage</span>
-                    </div>
-                    <span className="text-sm font-bold text-slate-900">{dbStats.storageUsed} MB / {dbStats.storageLimit} MB</span>
-                  </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2">
-                    <div 
-                      className="bg-gradient-to-r from-amber-600 to-amber-500 h-2 rounded-full transition-all"
-                      style={{ width: `${Math.min((dbStats.storageUsed / dbStats.storageLimit) * 100, 100)}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">{dbStats.storageLimit - dbStats.storageUsed} MB remaining</p>
-                </div>
-
-                <Button 
-                  variant="outline" 
-                  className="w-full border-slate-200 hover:border-emerald-600 rounded-lg"
-                  onClick={loadDatabaseStats}
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh Stats
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Pricing Plans */}
-            <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 pb-4">
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-emerald-600" />
-                  Upgrade Plans
-                </CardTitle>
-              </CardHeader>
               <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Free Plan */}
-                  <div className="border-2 border-slate-200 rounded-xl p-4 bg-slate-50">
-                    <div className="text-center mb-4">
-                      <h4 className="text-lg font-bold text-slate-900">Free</h4>
-                      <p className="text-3xl font-bold text-slate-900 mt-2">$0</p>
-                      <p className="text-xs text-slate-500">per month</p>
-                    </div>
-                    <ul className="space-y-2 text-xs text-slate-600 mb-4">
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-3 w-3 text-emerald-600" />
-                        100 Listings
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-3 w-3 text-emerald-600" />
-                        50 Users
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-3 w-3 text-emerald-600" />
-                        1 GB Storage
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-3 w-3 text-emerald-600" />
-                        Basic Support
-                      </li>
-                    </ul>
-                    <Button variant="outline" className="w-full" disabled>
-                      Current Plan
-                    </Button>
-                  </div>
-
-                  {/* Pro Plan */}
-                  <div className="border-2 border-emerald-600 rounded-xl p-4 bg-gradient-to-br from-emerald-50 to-blue-50 relative">
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <span className="bg-gradient-to-r from-emerald-600 to-blue-600 text-white text-xs px-3 py-1 rounded-full font-medium">
-                        Popular
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Listings Card */}
+                  <div className="border border-slate-200 rounded-xl p-6 bg-gradient-to-br from-emerald-50 to-white">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
+                          <Home className="h-6 w-6 text-emerald-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-600">Listings</p>
+                          <p className="text-2xl font-bold text-slate-900">{dbStats.listings}</p>
+                        </div>
+                      </div>
+                      <span className={`text-sm font-bold px-3 py-1 rounded-full ${
+                        (dbStats.listings / 100) * 100 >= 80 ? 'bg-red-100 text-red-700' :
+                        (dbStats.listings / 100) * 100 >= 50 ? 'bg-amber-100 text-amber-700' :
+                        'bg-emerald-100 text-emerald-700'
+                      }`}>
+                        {Math.round((dbStats.listings / 100) * 100)}%
                       </span>
                     </div>
-                    <div className="text-center mb-4">
-                      <h4 className="text-lg font-bold text-slate-900">Pro</h4>
-                      <p className="text-3xl font-bold text-emerald-600 mt-2">$29</p>
-                      <p className="text-xs text-slate-500">per month</p>
+                    <div className="w-full bg-slate-200 rounded-full h-3">
+                      <div 
+                        className={`h-3 rounded-full transition-all ${
+                          (dbStats.listings / 100) * 100 >= 80 ? 'bg-red-600' :
+                          (dbStats.listings / 100) * 100 >= 50 ? 'bg-amber-600' :
+                          'bg-emerald-600'
+                        }`}
+                        style={{ width: `${Math.min((dbStats.listings / 100) * 100, 100)}%` }}
+                      />
                     </div>
-                    <ul className="space-y-2 text-xs text-slate-600 mb-4">
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-3 w-3 text-emerald-600" />
-                        1,000 Listings
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-3 w-3 text-emerald-600" />
-                        500 Users
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-3 w-3 text-emerald-600" />
-                        10 GB Storage
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-3 w-3 text-emerald-600" />
-                        Priority Support
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-3 w-3 text-emerald-600" />
-                        Custom Domain
-                      </li>
-                    </ul>
-                    <Button 
-                      className="w-full bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white"
-                      onClick={() => window.open('https://supabase.com/dashboard/project/_/settings/billing', '_blank')}
-                    >
-                      Upgrade on Supabase
-                    </Button>
+                    <p className="text-xs text-slate-500 mt-3">Limit: 100 listings</p>
                   </div>
 
-                  {/* Enterprise Plan */}
-                  <div className="border-2 border-slate-200 rounded-xl p-4 bg-slate-50">
-                    <div className="text-center mb-4">
-                      <h4 className="text-lg font-bold text-slate-900">Enterprise</h4>
-                      <p className="text-3xl font-bold text-slate-900 mt-2">$99</p>
-                      <p className="text-xs text-slate-500">per month</p>
+                  {/* Users Card */}
+                  <div className="border border-slate-200 rounded-xl p-6 bg-gradient-to-br from-blue-50 to-white">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <Users className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-600">Users</p>
+                          <p className="text-2xl font-bold text-slate-900">{dbStats.users}</p>
+                        </div>
+                      </div>
+                      <span className={`text-sm font-bold px-3 py-1 rounded-full ${
+                        (dbStats.users / 50) * 100 >= 80 ? 'bg-red-100 text-red-700' :
+                        (dbStats.users / 50) * 100 >= 50 ? 'bg-amber-100 text-amber-700' :
+                        'bg-blue-100 text-blue-700'
+                      }`}>
+                        {Math.round((dbStats.users / 50) * 100)}%
+                      </span>
                     </div>
-                    <ul className="space-y-2 text-xs text-slate-600 mb-4">
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-3 w-3 text-emerald-600" />
-                        Unlimited Listings
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-3 w-3 text-emerald-600" />
-                        Unlimited Users
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-3 w-3 text-emerald-600" />
-                        100 GB Storage
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-3 w-3 text-emerald-600" />
-                        24/7 Support
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-3 w-3 text-emerald-600" />
-                        White Label
-                      </li>
-                    </ul>
-                    <Button variant="outline" className="w-full border-slate-300 hover:border-emerald-600">
-                      Contact Sales
-                    </Button>
+                    <div className="w-full bg-slate-200 rounded-full h-3">
+                      <div 
+                        className={`h-3 rounded-full transition-all ${
+                          (dbStats.users / 50) * 100 >= 80 ? 'bg-red-600' :
+                          (dbStats.users / 50) * 100 >= 50 ? 'bg-amber-600' :
+                          'bg-blue-600'
+                        }`}
+                        style={{ width: `${Math.min((dbStats.users / 50) * 100, 100)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-slate-500 mt-3">Limit: 50 users</p>
+                  </div>
+
+                  {/* Images Card */}
+                  <div className="border border-slate-200 rounded-xl p-6 bg-gradient-to-br from-purple-50 to-white">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                          <Camera className="h-6 w-6 text-purple-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-600">Images</p>
+                          <p className="text-2xl font-bold text-slate-900">{dbStats.images}</p>
+                        </div>
+                      </div>
+                      <span className={`text-sm font-bold px-3 py-1 rounded-full ${
+                        (dbStats.images / 500) * 100 >= 80 ? 'bg-red-100 text-red-700' :
+                        (dbStats.images / 500) * 100 >= 50 ? 'bg-amber-100 text-amber-700' :
+                        'bg-purple-100 text-purple-700'
+                      }`}>
+                        {Math.round((dbStats.images / 500) * 100)}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-3">
+                      <div 
+                        className={`h-3 rounded-full transition-all ${
+                          (dbStats.images / 500) * 100 >= 80 ? 'bg-red-600' :
+                          (dbStats.images / 500) * 100 >= 50 ? 'bg-amber-600' :
+                          'bg-purple-600'
+                        }`}
+                        style={{ width: `${Math.min((dbStats.images / 500) * 100, 100)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-slate-500 mt-3">Limit: 500 images</p>
+                  </div>
+
+                  {/* Storage Card */}
+                  <div className="border border-slate-200 rounded-xl p-6 bg-gradient-to-br from-amber-50 to-white">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
+                          <ImageIcon className="h-6 w-6 text-amber-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-600">Storage</p>
+                          <p className="text-2xl font-bold text-slate-900">{dbStats.storageUsed} MB</p>
+                        </div>
+                      </div>
+                      <span className={`text-sm font-bold px-3 py-1 rounded-full ${
+                        (dbStats.storageUsed / dbStats.storageLimit) * 100 >= 80 ? 'bg-red-100 text-red-700' :
+                        (dbStats.storageUsed / dbStats.storageLimit) * 100 >= 50 ? 'bg-amber-100 text-amber-700' :
+                        'bg-amber-100 text-amber-700'
+                      }`}>
+                        {Math.round((dbStats.storageUsed / dbStats.storageLimit) * 100)}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-3">
+                      <div 
+                        className={`h-3 rounded-full transition-all ${
+                          (dbStats.storageUsed / dbStats.storageLimit) * 100 >= 80 ? 'bg-red-600' :
+                          (dbStats.storageUsed / dbStats.storageLimit) * 100 >= 50 ? 'bg-amber-600' :
+                          'bg-amber-600'
+                        }`}
+                        style={{ width: `${Math.min((dbStats.storageUsed / dbStats.storageLimit) * 100, 100)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-slate-500 mt-3">Limit: {dbStats.storageLimit} MB (1 GB)</p>
                   </div>
                 </div>
 
-                <div className="mt-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <div className="flex gap-3">
-                    <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm text-amber-900">
-                      <p className="font-medium mb-1">Approaching Limit</p>
-                      <p className="text-xs">You're using {Math.round((dbStats.listings / 100) * 100)}% of your listings quota. Upgrade to Pro for more capacity.</p>
+                {(dbStats.listings >= 80 || dbStats.users >= 40 || dbStats.images >= 400 || dbStats.storageUsed >= dbStats.storageLimit * 0.8) && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-6">
+                    <div className="flex gap-3">
+                      <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-amber-900">
+                        <p className="font-medium mb-1">Approaching Limits</p>
+                        <p className="text-xs">You're using significant capacity. Contact support to upgrade your plan.</p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  )
+}
+

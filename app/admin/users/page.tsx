@@ -31,6 +31,8 @@ export default function AdminUsersPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortBy, setSortBy] = useState('newest')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(100) // Show all users
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [blockDialog, setBlockDialog] = useState(false)
@@ -319,14 +321,7 @@ export default function AdminUsersPage() {
     setSelectedUser({ ...user, totalListings, activeListings } as any)
   }
 
-  const filteredUsers = users.filter(user =>
-    (user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.phone?.toLowerCase().includes(searchQuery.toLowerCase())) &&
-    (roleFilter === 'all' || user.role === roleFilter) &&
-    (statusFilter === 'all' || 
-     (statusFilter === 'active' && !user.is_blocked) ||
-     (statusFilter === 'blocked' && user.is_blocked))
-  )
+  const filteredUsers = users // Show all users without filtering
 
   const stats = [
     { 
@@ -631,7 +626,7 @@ export default function AdminUsersPage() {
           </Card>
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredUsers.map((user) => (
+            {users.map((user) => (
               <div key={user.id} className="group relative">
 
                 <Card 
@@ -861,7 +856,7 @@ export default function AdminUsersPage() {
         {/* Pagination */}
         <div className="flex items-center justify-between mt-8">
           <p className="text-sm text-slate-600">
-            Showing <span className="font-medium">1</span> to <span className="font-medium">{filteredUsers.length}</span> of <span className="font-medium">{users.length}</span> users
+            Showing <span className="font-medium">{filteredUsers.length}</span> of <span className="font-medium">{users.length}</span> users
           </p>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" disabled>Previous</Button>
