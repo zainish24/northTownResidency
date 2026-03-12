@@ -33,6 +33,8 @@ const SETTINGS_CATEGORIES = [
   { id: 'security', label: 'Security', icon: Shield },
   { id: 'email', label: 'OTP/SMS', icon: Mail },
   { id: 'payment', label: 'Payment', icon: CreditCard },
+  { id: 'setup', label: 'DB Setup', icon: Settings },
+  { id: 'database', label: 'Usage', icon: BarChart3 },
 ]
 
 export default function SiteSettingsPage() {
@@ -40,6 +42,23 @@ export default function SiteSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState('general')
   const [notificationCount, setNotificationCount] = useState(0)
+  const [dbStats, setDbStats] = useState({
+    listings: 0,
+    users: 0,
+    images: 0,
+    storageUsed: 0,
+    storageLimit: 1024, // 1GB in MB
+    plan: 'Free',
+    daysLeft: 30
+  })
+  const [dbSetup, setDbSetup] = useState({
+    supabaseUrl: '',
+    supabaseKey: '',
+    connected: false,
+    setupComplete: false,
+    testing: false,
+    settingUp: false
+  })
   const [settings, setSettings] = useState({
     // General - map to database keys
     platform_name: 'NTR Properties',
@@ -106,6 +125,7 @@ export default function SiteSettingsPage() {
   useEffect(() => {
     fetchSettings()
     loadNotificationCount()
+    loadDatabaseStats()
   }, [])
 
   const loadNotificationCount = async () => {
@@ -120,6 +140,45 @@ export default function SiteSettingsPage() {
       .eq('is_read', false)
     
     setNotificationCount(count || 0)
+  }
+
+  const loadDatabaseStats = async () => {
+    const supabase = createClient()
+    
+    // Get counts
+    const { count: listingsCount } = await supabase
+      .from('listings')
+      .select('*', { count: 'exact', head: true })
+    
+    const { count: usersCount } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+    
+    const { count: imagesCount } = await supabase
+      .from('listing_images')
+      .select('*', { count: 'exact', head: true })
+    
+    // Get storage usage (approximate)
+    const { data: storageData } = await supabase.storage
+      .from('property-images')
+      .list()
+    
+    let totalSize = 0
+    if (storageData) {
+      storageData.forEach((file: any) => {
+        totalSize += file.metadata?.size || 0
+      })
+    }
+    
+    setDbStats({
+      listings: listingsCount || 0,
+      users: usersCount || 0,
+      images: imagesCount || 0,
+      storageUsed: Math.round(totalSize / (1024 * 1024)), // Convert to MB
+      storageLimit: 1024, // 1GB
+      plan: 'Free',
+      daysLeft: 30
+    })
   }
 
   const fetchSettings = async () => {
@@ -1055,8 +1114,265 @@ export default function SiteSettingsPage() {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
-      </div>
-    </div>
-  )
-}
+
+          {/* Database Usage Tab */}
+          <TabsContent value="database" className="space-y-6">
+            {/* Current Plan Card */}
+            <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 pb-4">
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-emerald-600" />
+                  Current Plan
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-2xl font-bold text-slate-900">{dbStats.plan} Plan</h3>
+                    <p className="text-sm text-slate-600">Perfect for getting started</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-3xl font-bold text-emerald-600">$0</p>
+                    <p className="text-xs text-slate-500">per month</p>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="h-4 w-4 text-blue-600" />
+                    <p className="text-sm font-medium text-blue-900">Trial Period</p>
+                  </div>
+                  <p className="text-xs text-blue-700">{dbStats.daysLeft} days remaining in your free trial</p>
+                </div>
+
+                <Button 
+                  className="w-full bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white rounded-lg"
+                  onClick={() => window.open('https://supabase.com/dashboard/project/_/settings/billing', '_blank')}
+                >
+                  <Zap className="h-4 w-4 mr-2" />
+                  Upgrade on Supabase
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Usage Statistics */}
+            <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 pb-4">
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-emerald-600" />
+                  Database Usage
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                {/* Listings */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Home className="h-4 w-4 text-emerald-600" />
+                      <span className="text-sm font-medium text-slate-700">Listings</span>
+                    </div>
+                    <span className="text-sm font-bold text-slate-900">{dbStats.listings} / 100</span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-emerald-600 to-emerald-500 h-2 rounded-full transition-all"
+                      style={{ width: `${Math.min((dbStats.listings / 100) * 100, 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">{100 - dbStats.listings} listings remaining</p>
+                </div>
+
+                {/* Users */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-slate-700">Users</span>
+                    </div>
+                    <span className="text-sm font-bold text-slate-900">{dbStats.users} / 50</span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-blue-600 to-blue-500 h-2 rounded-full transition-all"
+                      style={{ width: `${Math.min((dbStats.users / 50) * 100, 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">{50 - dbStats.users} users remaining</p>
+                </div>
+
+                {/* Images */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Camera className="h-4 w-4 text-purple-600" />
+                      <span className="text-sm font-medium text-slate-700">Images</span>
+                    </div>
+                    <span className="text-sm font-bold text-slate-900">{dbStats.images} / 500</span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-purple-600 to-purple-500 h-2 rounded-full transition-all"
+                      style={{ width: `${Math.min((dbStats.images / 500) * 100, 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">{500 - dbStats.images} images remaining</p>
+                </div>
+
+                {/* Storage */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className="h-4 w-4 text-amber-600" />
+                      <span className="text-sm font-medium text-slate-700">Storage</span>
+                    </div>
+                    <span className="text-sm font-bold text-slate-900">{dbStats.storageUsed} MB / {dbStats.storageLimit} MB</span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-amber-600 to-amber-500 h-2 rounded-full transition-all"
+                      style={{ width: `${Math.min((dbStats.storageUsed / dbStats.storageLimit) * 100, 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">{dbStats.storageLimit - dbStats.storageUsed} MB remaining</p>
+                </div>
+
+                <Button 
+                  variant="outline" 
+                  className="w-full border-slate-200 hover:border-emerald-600 rounded-lg"
+                  onClick={loadDatabaseStats}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh Stats
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Pricing Plans */}
+            <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 pb-4">
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-emerald-600" />
+                  Upgrade Plans
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Free Plan */}
+                  <div className="border-2 border-slate-200 rounded-xl p-4 bg-slate-50">
+                    <div className="text-center mb-4">
+                      <h4 className="text-lg font-bold text-slate-900">Free</h4>
+                      <p className="text-3xl font-bold text-slate-900 mt-2">$0</p>
+                      <p className="text-xs text-slate-500">per month</p>
+                    </div>
+                    <ul className="space-y-2 text-xs text-slate-600 mb-4">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-3 w-3 text-emerald-600" />
+                        100 Listings
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-3 w-3 text-emerald-600" />
+                        50 Users
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-3 w-3 text-emerald-600" />
+                        1 GB Storage
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-3 w-3 text-emerald-600" />
+                        Basic Support
+                      </li>
+                    </ul>
+                    <Button variant="outline" className="w-full" disabled>
+                      Current Plan
+                    </Button>
+                  </div>
+
+                  {/* Pro Plan */}
+                  <div className="border-2 border-emerald-600 rounded-xl p-4 bg-gradient-to-br from-emerald-50 to-blue-50 relative">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <span className="bg-gradient-to-r from-emerald-600 to-blue-600 text-white text-xs px-3 py-1 rounded-full font-medium">
+                        Popular
+                      </span>
+                    </div>
+                    <div className="text-center mb-4">
+                      <h4 className="text-lg font-bold text-slate-900">Pro</h4>
+                      <p className="text-3xl font-bold text-emerald-600 mt-2">$29</p>
+                      <p className="text-xs text-slate-500">per month</p>
+                    </div>
+                    <ul className="space-y-2 text-xs text-slate-600 mb-4">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-3 w-3 text-emerald-600" />
+                        1,000 Listings
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-3 w-3 text-emerald-600" />
+                        500 Users
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-3 w-3 text-emerald-600" />
+                        10 GB Storage
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-3 w-3 text-emerald-600" />
+                        Priority Support
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-3 w-3 text-emerald-600" />
+                        Custom Domain
+                      </li>
+                    </ul>
+                    <Button 
+                      className="w-full bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white"
+                      onClick={() => window.open('https://supabase.com/dashboard/project/_/settings/billing', '_blank')}
+                    >
+                      Upgrade on Supabase
+                    </Button>
+                  </div>
+
+                  {/* Enterprise Plan */}
+                  <div className="border-2 border-slate-200 rounded-xl p-4 bg-slate-50">
+                    <div className="text-center mb-4">
+                      <h4 className="text-lg font-bold text-slate-900">Enterprise</h4>
+                      <p className="text-3xl font-bold text-slate-900 mt-2">$99</p>
+                      <p className="text-xs text-slate-500">per month</p>
+                    </div>
+                    <ul className="space-y-2 text-xs text-slate-600 mb-4">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-3 w-3 text-emerald-600" />
+                        Unlimited Listings
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-3 w-3 text-emerald-600" />
+                        Unlimited Users
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-3 w-3 text-emerald-600" />
+                        100 GB Storage
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-3 w-3 text-emerald-600" />
+                        24/7 Support
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-3 w-3 text-emerald-600" />
+                        White Label
+                      </li>
+                    </ul>
+                    <Button variant="outline" className="w-full border-slate-300 hover:border-emerald-600">
+                      Contact Sales
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <div className="flex gap-3">
+                    <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-amber-900">
+                      <p className="font-medium mb-1">Approaching Limit</p>
+                      <p className="text-xs">You're using {Math.round((dbStats.listings / 100) * 100)}% of your listings quota. Upgrade to Pro for more capacity.</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>

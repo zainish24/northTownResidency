@@ -265,7 +265,7 @@ async function ListingsContent({ searchParams, phases, blocks, amenities: amenit
           
           {params.phase_id && (
             <span className="px-2 py-1 bg-white text-emerald-700 rounded-lg text-xs font-medium flex items-center gap-1 shadow-sm border border-emerald-200">
-              Phase {params.phase_id}
+              {phases?.find(p => p.id === params.phase_id)?.name || 'Phase'}
               <button className="hover:text-emerald-900">×</button>
             </span>
           )}
