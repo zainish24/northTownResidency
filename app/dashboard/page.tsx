@@ -1,3 +1,4 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
@@ -43,7 +44,7 @@ export default async function DashboardPage() {
 
   const { data: listings, error } = await supabase
     .from('listings')
-    .select('*, phase:phases(name), block:blocks(name), images:listing_images(*)')
+    .select('*, phase:phases(name), block:blocks(name), listing_images(*)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
 
@@ -57,6 +58,11 @@ export default async function DashboardPage() {
     approved: listings?.filter(l => l.status === 'approved').length || 0,
     rejected: listings?.filter(l => l.status === 'rejected').length || 0,
   }
+
+  const hasPending = stats.pending > 0
+  const hasApproved = stats.approved > 0
+  const hasRejected = stats.rejected > 0
+  const defaultTab = hasApproved ? 'approved' : hasPending ? 'pending' : hasRejected ? 'rejected' : 'approved'
 
   return (
     <>
@@ -137,40 +143,187 @@ export default async function DashboardPage() {
         </div>
 
         <div className="space-y-4">
-
           {listings && listings.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {listings.map((listing: Listing) => (
-                <div key={listing.id} className="relative group">
-                  <div className="[&_button:has(svg.lucide-message-circle)]:hidden h-full">
-                    <EnhancedPropertyCard listing={listing} />
-                  </div>
-                  {!listing.is_active && (
-                    <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm rounded-xl flex items-center justify-center z-20">
-                      <div className="text-center">
-                        <Power className="h-10 w-10 text-white/80 mx-auto mb-2" />
-                        <span className="text-white text-sm font-bold">Inactive</span>
+            <Tabs defaultValue={defaultTab} className="w-full">
+              <div className="flex flex-col lg:flex-row gap-6">
+                {/* Sidebar Tabs */}
+                <aside className="lg:w-64 shrink-0">
+                  <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
+                    <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 pb-4">
+                      <CardTitle className="text-base">Filter by Status</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <TabsList className="flex flex-col h-auto w-full bg-transparent p-2 gap-2">
+                        {hasApproved && (
+                          <TabsTrigger 
+                            value="approved" 
+                            className="w-full justify-start gap-3 data-[state=active]:bg-emerald-600 data-[state=active]:text-white rounded-lg py-3 px-4"
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                            <span className="flex-1 text-left">Approved</span>
+                            <Badge className="bg-emerald-100 text-emerald-700 data-[state=active]:bg-white data-[state=active]:text-emerald-600">
+                              {stats.approved}
+                            </Badge>
+                          </TabsTrigger>
+                        )}
+                        {hasPending && (
+                          <TabsTrigger 
+                            value="pending" 
+                            className="w-full justify-start gap-3 data-[state=active]:bg-amber-600 data-[state=active]:text-white rounded-lg py-3 px-4"
+                          >
+                            <Clock className="h-4 w-4" />
+                            <span className="flex-1 text-left">Pending</span>
+                            <Badge className="bg-amber-100 text-amber-700 data-[state=active]:bg-white data-[state=active]:text-amber-600">
+                              {stats.pending}
+                            </Badge>
+                          </TabsTrigger>
+                        )}
+                        {hasRejected && (
+                          <TabsTrigger 
+                            value="rejected" 
+                            className="w-full justify-start gap-3 data-[state=active]:bg-red-600 data-[state=active]:text-white rounded-lg py-3 px-4"
+                          >
+                            <XCircle className="h-4 w-4" />
+                            <span className="flex-1 text-left">Rejected</span>
+                            <Badge className="bg-red-100 text-red-700 data-[state=active]:bg-white data-[state=active]:text-red-600">
+                              {stats.rejected}
+                            </Badge>
+                          </TabsTrigger>
+                        )}
+                      </TabsList>
+                    </CardContent>
+                  </Card>
+
+                  {/* Quick Stats Card */}
+                  <Card className="border-0 shadow-lg rounded-xl overflow-hidden mt-4">
+                    <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 pb-4">
+                      <CardTitle className="text-base">Quick Stats</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-slate-600">Total Listings</span>
+                        <span className="font-bold text-slate-900">{stats.total}</span>
                       </div>
-                    </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-slate-600">Active</span>
+                        <span className="font-bold text-emerald-600">{listings.filter(l => l.is_active).length}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-slate-600">Inactive</span>
+                        <span className="font-bold text-slate-600">{listings.filter(l => !l.is_active).length}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </aside>
+
+                {/* Main Content */}
+                <div className="flex-1 min-w-0">
+                  {hasApproved && (
+                    <TabsContent value="approved" className="mt-0">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {listings.filter(l => l.status === 'approved').map((listing: Listing) => (
+                      <div key={listing.id} className="relative group">
+                        <div className="[&_button:has(svg.lucide-message-circle)]:hidden h-full">
+                          <EnhancedPropertyCard listing={listing} />
+                        </div>
+                        {!listing.is_active && (
+                          <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm rounded-xl flex items-center justify-center z-20">
+                            <div className="text-center">
+                              <Power className="h-10 w-10 text-white/80 mx-auto mb-2" />
+                              <span className="text-white text-sm font-bold">Inactive</span>
+                            </div>
+                          </div>
+                        )}
+                        <div className="absolute bottom-3 left-3 right-3 z-30 flex gap-1.5">
+                          <form action={async () => { 'use server'; const supabase = await createClient(); await supabase.from('listings').update({ is_active: !listing.is_active }).eq('id', listing.id); revalidatePath('/dashboard') }} className="flex-1">
+                            <Button size="sm" variant="secondary" type="submit" className={`w-full rounded-lg text-xs h-8 shadow-lg ${listing.is_active ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-slate-600 text-white hover:bg-slate-700'}`}>
+                              <Power className="h-3 w-3" />
+                            </Button>
+                          </form>
+                          <Button size="sm" variant="secondary" asChild className="flex-1 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-xs h-8 shadow-lg">
+                            <Link href={`/dashboard/post?edit=${listing.id}`}><Edit className="h-3 w-3" /></Link>
+                          </Button>
+                          <form action={async () => { 'use server'; const supabase = await createClient(); await supabase.from('listings').delete().eq('id', listing.id); revalidatePath('/dashboard') }} className="flex-1">
+                            <Button size="sm" variant="secondary" type="submit" className="w-full bg-red-600 text-white hover:bg-red-700 rounded-lg text-xs h-8 shadow-lg">
+                              <Trash className="h-3 w-3" />
+                            </Button>
+                          </form>
+                        </div>
+                      </div>
+                    ))}
+                      </div>
+                    </TabsContent>
                   )}
-                  <div className="absolute bottom-3 left-3 right-3 z-30 flex gap-1.5">
-                    <form action={async () => { 'use server'; const supabase = await createClient(); await supabase.from('listings').update({ is_active: !listing.is_active }).eq('id', listing.id); revalidatePath('/dashboard') }} className="flex-1">
-                      <Button size="sm" variant="secondary" type="submit" className={`w-full rounded-lg text-xs h-8 shadow-lg ${listing.is_active ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-slate-600 text-white hover:bg-slate-700'}`}>
-                        <Power className="h-3 w-3" />
-                      </Button>
-                    </form>
-                    <Button size="sm" variant="secondary" asChild className="flex-1 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-xs h-8 shadow-lg">
-                      <Link href={`/dashboard/post?edit=${listing.id}`}><Edit className="h-3 w-3" /></Link>
-                    </Button>
-                    <form action={async () => { 'use server'; const supabase = await createClient(); await supabase.from('listings').delete().eq('id', listing.id); revalidatePath('/dashboard') }} className="flex-1">
-                      <Button size="sm" variant="secondary" type="submit" className="w-full bg-red-600 text-white hover:bg-red-700 rounded-lg text-xs h-8 shadow-lg">
-                        <Trash className="h-3 w-3" />
-                      </Button>
-                    </form>
-                  </div>
+
+                  {hasPending && (
+                    <TabsContent value="pending" className="mt-0">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {listings.filter(l => l.status === 'pending').map((listing: Listing) => (
+                      <div key={listing.id} className="relative group">
+                        <div className="[&_button:has(svg.lucide-message-circle)]:hidden h-full">
+                          <EnhancedPropertyCard listing={listing} />
+                        </div>
+                        {!listing.is_active && (
+                          <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm rounded-xl flex items-center justify-center z-20">
+                            <div className="text-center">
+                              <Power className="h-10 w-10 text-white/80 mx-auto mb-2" />
+                              <span className="text-white text-sm font-bold">Inactive</span>
+                            </div>
+                          </div>
+                        )}
+                        <div className="absolute bottom-3 left-3 right-3 z-30 flex gap-1.5">
+                          <form action={async () => { 'use server'; const supabase = await createClient(); await supabase.from('listings').update({ is_active: !listing.is_active }).eq('id', listing.id); revalidatePath('/dashboard') }} className="flex-1">
+                            <Button size="sm" variant="secondary" type="submit" className={`w-full rounded-lg text-xs h-8 shadow-lg ${listing.is_active ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-slate-600 text-white hover:bg-slate-700'}`}>
+                              <Power className="h-3 w-3" />
+                            </Button>
+                          </form>
+                          <Button size="sm" variant="secondary" asChild className="flex-1 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-xs h-8 shadow-lg">
+                            <Link href={`/dashboard/post?edit=${listing.id}`}><Edit className="h-3 w-3" /></Link>
+                          </Button>
+                          <form action={async () => { 'use server'; const supabase = await createClient(); await supabase.from('listings').delete().eq('id', listing.id); revalidatePath('/dashboard') }} className="flex-1">
+                            <Button size="sm" variant="secondary" type="submit" className="w-full bg-red-600 text-white hover:bg-red-700 rounded-lg text-xs h-8 shadow-lg">
+                              <Trash className="h-3 w-3" />
+                            </Button>
+                          </form>
+                        </div>
+                      </div>
+                    ))}
+                      </div>
+                    </TabsContent>
+                  )}
+
+                  {hasRejected && (
+                    <TabsContent value="rejected" className="mt-0">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {listings.filter(l => l.status === 'rejected').map((listing: Listing) => (
+                      <div key={listing.id} className="relative group">
+                        <div className="[&_button:has(svg.lucide-message-circle)]:hidden h-full">
+                          <EnhancedPropertyCard listing={listing} />
+                        </div>
+                        <div className="absolute top-3 left-3 right-3 z-30">
+                          <div className="bg-red-100 border border-red-200 rounded-lg p-3">
+                            <p className="text-xs font-semibold text-red-700 mb-1">Rejection Reason:</p>
+                            <p className="text-xs text-red-600">{listing.rejection_reason || 'No reason provided'}</p>
+                          </div>
+                        </div>
+                        <div className="absolute bottom-3 left-3 right-3 z-30 flex gap-1.5">
+                          <Button size="sm" variant="secondary" asChild className="flex-1 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-xs h-8 shadow-lg">
+                            <Link href={`/dashboard/post?edit=${listing.id}`}><Edit className="h-3 w-3" /></Link>
+                          </Button>
+                          <form action={async () => { 'use server'; const supabase = await createClient(); await supabase.from('listings').delete().eq('id', listing.id); revalidatePath('/dashboard') }} className="flex-1">
+                            <Button size="sm" variant="secondary" type="submit" className="w-full bg-red-600 text-white hover:bg-red-700 rounded-lg text-xs h-8 shadow-lg">
+                              <Trash className="h-3 w-3" />
+                            </Button>
+                          </form>
+                        </div>
+                      </div>
+                    ))}
+                      </div>
+                    </TabsContent>
+                  )}
                 </div>
-              ))}
-            </div>
+              </div>
+            </Tabs>
           ) : (
             <Card className="border-0 shadow-md rounded-xl overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50/30">
               <CardContent className="p-8 text-center">

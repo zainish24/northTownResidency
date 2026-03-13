@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     
     const { data: listing, error } = await supabase
       .from('listings')
-      .insert(body)
+      .insert({ ...body, status: 'pending' })
       .select()
       .single()
     

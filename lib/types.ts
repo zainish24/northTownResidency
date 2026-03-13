@@ -89,9 +89,11 @@ export interface Listing {
   phase?: Phase
   block?: Block
   images?: ListingImage[]
+  listing_images?: ListingImage[]
   profile?: Profile
   // amenities join (optional)
   listing_amenities?: Array<{ amenity: Amenity }>
+  is_active?: boolean
 }
 
 export interface ListingImage {

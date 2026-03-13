@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
-import { ArrowLeft, ArrowRight, Upload, X, Sparkles, Building2, MapPin, Home, Store, Ruler, DollarSign, Camera, FileText, CheckCircle } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Upload, X, Sparkles, Building2, MapPin, Home, Store, Ruler, DollarSign, Camera, FileText, CheckCircle, AlertCircle } from 'lucide-react'
 import { getIconComponent } from '@/lib/icon'
 import type { Phase, Block } from '@/lib/types'
 
@@ -33,14 +33,16 @@ function PostListingContent() {
   const [images, setImages] = useState<File[]>([])
   const [loadingPhases, setLoadingPhases] = useState(true)
   const [loadingBlocks, setLoadingBlocks] = useState(false)
+  const [showValidationModal, setShowValidationModal] = useState(false)
+  const [validationMessage, setValidationMessage] = useState('')
   
   const [form, setForm] = useState({
     title: '',
     description: '',
     phase_id: '',
     block_id: '',
-    property_type: 'residential_plot' as 'residential_plot' | 'commercial_shop',
-    listing_type: 'sale' as 'sale' | 'rent',
+    property_type: '' as 'residential_plot' | 'commercial_shop' | '',
+    listing_type: '' as 'sale' | 'rent' | '',
     plot_size_sqyd: '',
     shop_size_sqft: '',
     price: '',
@@ -226,8 +228,8 @@ function PostListingContent() {
         description: form.description,
         phase_id: (form.phase_id && form.phase_id !== 'skip') ? form.phase_id : null,
         block_id: (form.block_id && form.block_id !== 'skip') ? form.block_id : null,
-        property_type: form.property_type,
-        listing_type: form.listing_type,
+        property_type: form.property_type || 'residential_plot',
+        listing_type: form.listing_type || 'sale',
         plot_size_sqyd: form.property_type === 'residential_plot' ? parseFloat(form.plot_size_sqyd) : null,
         shop_size_sqft: form.property_type === 'commercial_shop' ? parseFloat(form.shop_size_sqft) : null,
         price: parseFloat(form.price),
@@ -241,7 +243,7 @@ function PostListingContent() {
         has_construction: form.has_construction,
         construction_status: form.construction_status,
         address_details: form.address_details,
-        status: 'approved',
+        status: 'pending',
         views_count: 0,
         is_featured: false,
       }
@@ -320,6 +322,46 @@ function PostListingContent() {
 
   return (
     <>
+      {/* Validation Modal */}
+      {showValidationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-300">
+            {/* Header */}
+            <div className="bg-gradient-to-br from-emerald-500 via-emerald-600 to-blue-600 p-6">
+              <div className="flex items-start gap-4">
+                <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl">
+                  <AlertCircle className="h-7 w-7 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-1">Required Field</h3>
+                  <p className="text-emerald-50 text-sm">Please complete this field to continue</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Content */}
+            <div className="p-6 bg-gradient-to-br from-slate-50 to-white">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-1 h-full bg-gradient-to-b from-emerald-500 to-blue-500 rounded-full" />
+                <p className="text-slate-700 text-base leading-relaxed">
+                  {validationMessage}
+                </p>
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="bg-white border-t border-slate-100 px-6 py-4 flex justify-end">
+              <Button
+                onClick={() => setShowValidationModal(false)}
+                className="bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white px-8 py-2.5 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 font-medium"
+              >
+                Got it
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section - Exactly like Listings Page */}
       <section className="relative min-h-[40vh] flex items-center overflow-hidden w-full -mt-8">
         {/* Background */}
@@ -420,7 +462,7 @@ function PostListingContent() {
             </CardHeader>
             <CardContent className="p-5 space-y-4">
               <div>
-                <Label className="text-sm font-medium mb-1.5 block">Phase</Label>
+                <Label className="text-sm font-medium mb-1.5 block">Phase <span className="text-red-500">*</span></Label>
                 <Select value={form.phase_id} onValueChange={(v) => {
                   setForm({ ...form, phase_id: v, block_id: '' })
                   setBlocks([])
@@ -428,11 +470,10 @@ function PostListingContent() {
                     loadBlocks(v)
                   }
                 }} disabled={loadingPhases}>
-                  <SelectTrigger className="rounded-lg">
-                    <SelectValue placeholder="Select phase or skip" />
+                  <SelectTrigger className={`rounded-lg ${!form.phase_id ? 'border-red-300 focus:border-red-500' : ''}`}>
+                    <SelectValue placeholder="Select phase" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="skip">Skip - Will add later</SelectItem>
                     {phases.map(p => (
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
@@ -441,15 +482,14 @@ function PostListingContent() {
               </div>
 
               <div>
-                <Label className="text-sm font-medium mb-1.5 block">Block</Label>
+                <Label className="text-sm font-medium mb-1.5 block">Block <span className="text-red-500">*</span></Label>
                 <Select value={form.block_id} onValueChange={(v) => {
                   setForm({ ...form, block_id: v })
                 }} disabled={!form.phase_id || form.phase_id === 'skip' || loadingBlocks}>
-                  <SelectTrigger className="rounded-lg">
-                    <SelectValue placeholder="Select block or skip" />
+                  <SelectTrigger className={`rounded-lg ${!form.block_id ? 'border-red-300 focus:border-red-500' : ''}`}>
+                    <SelectValue placeholder="Select block" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="skip">Skip - Will add later</SelectItem>
                     {blocks.map(b => (
                       <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                     ))}
@@ -462,10 +502,10 @@ function PostListingContent() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-medium mb-1.5 block">Property Type</Label>
+                  <Label className="text-sm font-medium mb-1.5 block">Property Type <span className="text-red-500">*</span></Label>
                   <Select value={form.property_type} onValueChange={(v: any) => setForm({ ...form, property_type: v })}>
-                    <SelectTrigger className="rounded-lg">
-                      <SelectValue />
+                    <SelectTrigger className={`rounded-lg ${!form.property_type ? 'border-red-300 focus:border-red-500' : ''}`}>
+                      <SelectValue placeholder="Select property type" />
                     </SelectTrigger>
                     <SelectContent>
                       {propertyTypes.length > 0 ? (
@@ -482,10 +522,10 @@ function PostListingContent() {
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium mb-1.5 block">Listing Type</Label>
+                  <Label className="text-sm font-medium mb-1.5 block">Listing Type <span className="text-red-500">*</span></Label>
                   <Select value={form.listing_type} onValueChange={(v: any) => setForm({ ...form, listing_type: v })}>
-                    <SelectTrigger className="rounded-lg">
-                      <SelectValue />
+                    <SelectTrigger className={`rounded-lg ${!form.listing_type ? 'border-red-300 focus:border-red-500' : ''}`}>
+                      <SelectValue placeholder="Select listing type" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="sale">For Sale</SelectItem>
@@ -511,21 +551,39 @@ function PostListingContent() {
               <div className="grid grid-cols-2 gap-4">
                 {form.property_type === 'residential_plot' ? (
                   <div className="col-span-2">
-                    <Label className="text-sm font-medium mb-1.5 block">Plot Size (Sq Yards)</Label>
-                    <Input type="number" value={form.plot_size_sqyd} onChange={(e) => setForm({ ...form, plot_size_sqyd: e.target.value })} placeholder="e.g., 120" className="rounded-lg" />
+                    <Label className="text-sm font-medium mb-1.5 block">Plot Size (Sq Yards) <span className="text-red-500">*</span></Label>
+                    <Input 
+                      type="number" 
+                      value={form.plot_size_sqyd} 
+                      onChange={(e) => setForm({ ...form, plot_size_sqyd: e.target.value })} 
+                      placeholder="e.g., 120" 
+                      className={`rounded-lg ${!form.plot_size_sqyd ? 'border-red-300 focus:border-red-500' : ''}`} 
+                    />
                   </div>
-                ) : (
+                ) : form.property_type === 'commercial_shop' ? (
                   <div className="col-span-2">
-                    <Label className="text-sm font-medium mb-1.5 block">Shop Size (Sq Ft)</Label>
-                    <Input type="number" value={form.shop_size_sqft} onChange={(e) => setForm({ ...form, shop_size_sqft: e.target.value })} placeholder="e.g., 80" className="rounded-lg" />
+                    <Label className="text-sm font-medium mb-1.5 block">Shop Size (Sq Ft) <span className="text-red-500">*</span></Label>
+                    <Input 
+                      type="number" 
+                      value={form.shop_size_sqft} 
+                      onChange={(e) => setForm({ ...form, shop_size_sqft: e.target.value })} 
+                      placeholder="e.g., 80" 
+                      className={`rounded-lg ${!form.shop_size_sqft ? 'border-red-300 focus:border-red-500' : ''}`} 
+                    />
                   </div>
-                )}
+                ) : null}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 md:col-span-1">
-                  <Label className="text-sm font-medium mb-1.5 block">Price (PKR)</Label>
-                  <Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="e.g., 5000000" className="rounded-lg" />
+                  <Label className="text-sm font-medium mb-1.5 block">Price (PKR) <span className="text-red-500">*</span></Label>
+                  <Input 
+                    type="number" 
+                    value={form.price} 
+                    onChange={(e) => setForm({ ...form, price: e.target.value })} 
+                    placeholder="e.g., 5000000" 
+                    className={`rounded-lg ${!form.price ? 'border-red-300 focus:border-red-500' : ''}`} 
+                  />
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <Label className="text-sm font-medium mb-1.5 block">Price Type</Label>
@@ -603,13 +661,24 @@ function PostListingContent() {
             </CardHeader>
             <CardContent className="p-5 space-y-4">
               <div>
-                <Label className="text-sm font-medium mb-1.5 block">Title</Label>
-                <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g., 120 Sq Yd Corner Plot" className="rounded-lg" />
+                <Label className="text-sm font-medium mb-1.5 block">Title <span className="text-red-500">*</span></Label>
+                <Input 
+                  value={form.title} 
+                  onChange={(e) => setForm({ ...form, title: e.target.value })} 
+                  placeholder="e.g., 120 Sq Yd Corner Plot" 
+                  className={`rounded-lg ${!form.title ? 'border-red-300 focus:border-red-500' : ''}`} 
+                />
               </div>
 
               <div>
-                <Label className="text-sm font-medium mb-1.5 block">Description</Label>
-                <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={4} placeholder="Describe your property..." className="rounded-lg" />
+                <Label className="text-sm font-medium mb-1.5 block">Description <span className="text-red-500">*</span></Label>
+                <Textarea 
+                  value={form.description} 
+                  onChange={(e) => setForm({ ...form, description: e.target.value })} 
+                  rows={4} 
+                  placeholder="Describe your property..." 
+                  className={`rounded-lg ${!form.description ? 'border-red-300 focus:border-red-500' : ''}`} 
+                />
               </div>
 
               <div>
@@ -712,7 +781,66 @@ function PostListingContent() {
           
           {step < 4 ? (
             <Button 
-              onClick={() => setStep(step + 1)} 
+              onClick={() => {
+                // Step 1 validation
+                if (step === 1) {
+                  if (!form.phase_id) {
+                    setValidationMessage('Please select a phase to continue.')
+                    setShowValidationModal(true)
+                    return
+                  }
+                  if (!form.block_id) {
+                    setValidationMessage('Please select a block to continue.')
+                    setShowValidationModal(true)
+                    return
+                  }
+                  if (!form.property_type) {
+                    setValidationMessage('Please select a property type to continue.')
+                    setShowValidationModal(true)
+                    return
+                  }
+                  if (!form.listing_type) {
+                    setValidationMessage('Please select a listing type (For Sale or For Rent) to continue.')
+                    setShowValidationModal(true)
+                    return
+                  }
+                }
+                
+                // Step 2 validation
+                if (step === 2) {
+                  if (form.property_type === 'residential_plot' && !form.plot_size_sqyd) {
+                    setValidationMessage('Please enter the plot size in square yards to continue.')
+                    setShowValidationModal(true)
+                    return
+                  }
+                  if (form.property_type === 'commercial_shop' && !form.shop_size_sqft) {
+                    setValidationMessage('Please enter the shop size in square feet to continue.')
+                    setShowValidationModal(true)
+                    return
+                  }
+                  if (!form.price) {
+                    setValidationMessage('Please enter the price to continue.')
+                    setShowValidationModal(true)
+                    return
+                  }
+                }
+                
+                // Step 3 validation
+                if (step === 3) {
+                  if (!form.title) {
+                    setValidationMessage('Please enter a title for your listing to continue.')
+                    setShowValidationModal(true)
+                    return
+                  }
+                  if (!form.description) {
+                    setValidationMessage('Please enter a description for your property to continue.')
+                    setShowValidationModal(true)
+                    return
+                  }
+                }
+                
+                setStep(step + 1)
+              }} 
               className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white rounded-lg px-6 py-5 text-sm shadow-lg"
             >
               Next

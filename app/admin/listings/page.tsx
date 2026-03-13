@@ -28,6 +28,7 @@ import autoTable from 'jspdf-autotable'
 
 export default function AdminListingsPage() {
   const [listings, setListings] = useState<Listing[]>([])
+  const [allListings, setAllListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -50,9 +51,23 @@ export default function AdminListingsPage() {
   const fetchListings = async () => {
     setLoading(true)
     const supabase = createClient()
+    
+    // Fetch all listings for stats (only active ones)
+    const { data: allData } = await supabase
+      .from('listings')
+      .select('*, phase:phases(name), block:blocks(name), profile:profiles(full_name, phone), listing_images(image_url)')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+    
+    if (allData) {
+      setAllListings(allData as Listing[])
+    }
+
+    // Fetch filtered listings (only active ones)
     let query = supabase
       .from('listings')
       .select('*, phase:phases(name), block:blocks(name), profile:profiles(full_name, phone), listing_images(image_url)')
+      .eq('is_active', true)
       .order('created_at', { ascending: false })
 
     if (statusFilter) {
@@ -309,7 +324,7 @@ export default function AdminListingsPage() {
   const stats = [
     { 
       label: 'Total Listings', 
-      value: listings.length,
+      value: allListings.length,
       icon: FileText,
       color: 'bg-blue-100 text-blue-600',
       trend: '+12%',
@@ -317,13 +332,13 @@ export default function AdminListingsPage() {
     },
     { 
       label: 'Pending Review', 
-      value: listings.filter(l => l.status === 'pending').length,
+      value: allListings.filter(l => l.status === 'pending').length,
       icon: Clock,
       color: 'bg-amber-100 text-amber-600'
     },
     { 
       label: 'Approved', 
-      value: listings.filter(l => l.status === 'approved').length,
+      value: allListings.filter(l => l.status === 'approved').length,
       icon: CheckCircle,
       color: 'bg-emerald-100 text-emerald-600',
       trend: '+8%',
@@ -331,19 +346,19 @@ export default function AdminListingsPage() {
     },
     { 
       label: 'Rejected', 
-      value: listings.filter(l => l.status === 'rejected').length,
+      value: allListings.filter(l => l.status === 'rejected').length,
       icon: XCircle,
       color: 'bg-red-100 text-red-600'
     },
     { 
       label: 'Featured', 
-      value: listings.filter(l => l.is_featured).length,
+      value: allListings.filter(l => l.is_featured).length,
       icon: Star,
       color: 'bg-yellow-100 text-yellow-600'
     },
     { 
       label: 'Total Views', 
-      value: listings.reduce((acc, l) => acc + (l.views_count || 0), 0).toLocaleString(),
+      value: allListings.reduce((acc, l) => acc + (l.views_count || 0), 0).toLocaleString(),
       icon: Eye,
       color: 'bg-purple-100 text-purple-600',
       trend: '+25%',
@@ -417,13 +432,27 @@ export default function AdminListingsPage() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          {[stats[0], stats[4], stats[5]].map((stat, index) => {
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+          {stats.map((stat, index) => {
             const Icon = stat.icon
+            const isClickable = [0, 1, 2, 3, 4, 5].includes(index)
             return (
               <div 
                 key={index} 
-                className="bg-white rounded-xl p-4 border border-slate-200 hover:shadow-lg transition-all hover:border-emerald-200 group"
+                className={`bg-white rounded-xl p-4 border border-slate-200 hover:shadow-lg transition-all hover:border-emerald-200 group ${
+                  isClickable ? 'cursor-pointer' : ''
+                }`}
+                onClick={() => {
+                  if (stat.label === 'Total Listings') setStatusFilter('')
+                  else if (stat.label === 'Pending Review') setStatusFilter('pending')
+                  else if (stat.label === 'Approved') setStatusFilter('approved')
+                  else if (stat.label === 'Rejected') setStatusFilter('rejected')
+                  else if (stat.label === 'Featured') {
+                    setStatusFilter('')
+                    // Fetch featured listings
+                    fetchListings()
+                  }
+                }}
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className={`w-10 h-10 rounded-lg ${stat.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
@@ -615,17 +644,18 @@ export default function AdminListingsPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openListingModal(listing.id)
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        {(listing.status === 'pending' || listing.status === 'approved') && (
+                          <Link href={`/admin/listings/${listing.id}/edit`}>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-blue-600 hover:text-blue-700"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        )}
                         {listing.status === 'pending' && (
                           <>
                             <Button 
@@ -908,10 +938,6 @@ export default function AdminListingsPage() {
                             Call
                           </Button>
                         </a>
-                        <Button variant="outline" className="gap-2">
-                          <Mail className="h-4 w-4" />
-                          Email
-                        </Button>
                       </div>
                     </div>
                   </CardContent>

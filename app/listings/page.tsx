@@ -98,7 +98,7 @@ async function ListingsContent({ searchParams, phases, blocks, amenities: amenit
       *,
       phase:phases(*),
       block:blocks(*),
-      images:listing_images(*)
+      listing_images(*)
     `)
     .eq('is_active', true)
     .eq('status', 'approved')

@@ -27,7 +27,7 @@ export function EnhancedPropertyCard({ listing, showStatus = false }: EnhancedPr
   const [whatsappNumber, setWhatsappNumber] = useState('923001234567')
   const [watermarkUrl, setWatermarkUrl] = useState('/logo.png')
   const router = useRouter()
-  const primaryImage = listing.images?.find(img => img.is_primary) || listing.images?.[0]
+  const primaryImage = listing.listing_images?.find(img => img.is_primary) || listing.listing_images?.[0]
   
   useEffect(() => {
     const checkSaved = async () => {
@@ -231,10 +231,10 @@ export function EnhancedPropertyCard({ listing, showStatus = false }: EnhancedPr
           </Button>
 
           {/* Image Count */}
-          {listing.images && listing.images.length > 0 && (
+          {listing.listing_images && listing.listing_images.length > 0 && (
             <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-lg flex items-center gap-1 z-20">
               <Camera className="h-3 w-3" />
-              {listing.images.length}
+              {listing.listing_images.length}
             </div>
           )}
           
