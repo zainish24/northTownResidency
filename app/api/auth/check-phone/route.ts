@@ -10,19 +10,20 @@ export async function POST(request: Request) {
     }
 
     const formatted = phone.startsWith('+') ? phone : `+92${phone.replace(/^0/, '')}`
-    const email = `${formatted.replace('+', '')}@ntr.local`
-    const password = 'default_password_ntr2024'
-
     const supabase = await createClient()
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
-    if (error) {
-      return NextResponse.json({ error: 'No account found with this number. Please sign up first.' }, { status: 400 })
+    const { data } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('phone', formatted)
+      .single()
+
+    if (!data) {
+      return NextResponse.json({ error: 'No account found. Please sign up first.' }, { status: 404 })
     }
 
-    return NextResponse.json({ success: true, session: data.session })
+    return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error('Phone login error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

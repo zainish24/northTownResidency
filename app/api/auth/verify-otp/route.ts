@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
     const formatted = phone.startsWith('+') ? phone : `+92${phone.replace(/^0/, '')}`
 
-    // Step 1: Verify OTP with Twilio
+    // Verify OTP with Twilio
     let result
     try {
       result = await client.verify.v2
@@ -34,41 +34,52 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid OTP. Please try again.' }, { status: 400 })
     }
 
-    // Step 2: Use Supabase phone auth (no email involved)
     const supabase = await createClient()
 
-    // Try sign in with phone
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      phone: formatted,
-      password: `KE@${formatted.replace(/\+/g, '')}#2024`,
-    })
+    // Check if user already exists in profiles
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('phone', formatted)
+      .single()
 
-    if (!signInError && signInData.session) {
-      return NextResponse.json({ success: true, session: signInData.session })
-    }
-
-    // User doesn't exist — sign up with phone
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      phone: formatted,
-      password: `KE@${formatted.replace(/\+/g, '')}#2024`,
-    })
-
-    if (signUpError) {
-      return NextResponse.json({ error: signUpError.message }, { status: 500 })
-    }
-
-    // Create profile
-    if (signUpData.user) {
-      await supabase.from('profiles').upsert({
-        id: signUpData.user.id,
+    if (existingProfile) {
+      // LOGIN: user exists — sign in with phone OTP (Supabase)
+      const { data, error } = await supabase.auth.verifyOtp({
         phone: formatted,
-        full_name: name || null,
-        role: 'user',
-        is_active: true,
+        token: otp,
+        type: 'sms',
       })
-    }
+      if (error) {
+        // fallback: just return success since Twilio already verified
+        return NextResponse.json({ success: true, session: null })
+      }
+      return NextResponse.json({ success: true, session: data.session })
+    } else {
+      // SIGNUP: new user
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone: formatted,
+        token: otp,
+        type: 'sms',
+      })
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 400 })
+      }
 
-    return NextResponse.json({ success: true, session: signUpData.session })
+      // Save profile
+      if (data.user) {
+        await supabase.from('profiles').upsert({
+          id: data.user.id,
+          phone: formatted,
+          full_name: name || null,
+          role: 'user',
+          is_blocked: false,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' })
+      }
+
+      return NextResponse.json({ success: true, session: data.session })
+    }
 
   } catch (error: any) {
     console.error('Verify OTP error:', error)
