@@ -43,7 +43,7 @@ export default function PhasesPage() {
     features: '',
     image_url: '',
     completion_date: '',
-    developer: 'North Town Residency'
+    developer: 'Karachi Estates'
   })
   const [blocks, setBlocks] = useState<string[]>([])
   const [newBlock, setNewBlock] = useState('')
@@ -457,7 +457,7 @@ export default function PhasesPage() {
                   features: '',
                   image_url: '',
                   completion_date: '',
-                  developer: 'North Town Residency'
+                  developer: 'Karachi Estates'
                 }); 
                 setDialog(true); 
               }}
@@ -726,7 +726,7 @@ export default function PhasesPage() {
                               features: phase.features || '',
                               image_url: phase.image_url || '',
                               completion_date: phase.completion_date || '',
-                              developer: phase.developer || 'North Town Residency'
+                              developer: phase.developer || 'Karachi Estates'
                             }); 
                             setDialog(true); 
                           }}
@@ -826,7 +826,7 @@ export default function PhasesPage() {
                                 features: phase.features || '',
                                 image_url: phase.image_url || '',
                                 completion_date: phase.completion_date || '',
-                                developer: phase.developer || 'North Town Residency'
+                                developer: phase.developer || 'Karachi Estates'
                               }); 
                               setDialog(true); 
                             }}
@@ -886,7 +886,7 @@ export default function PhasesPage() {
             features: '',
             image_url: '',
             completion_date: '',
-            developer: 'North Town Residency'
+            developer: 'Karachi Estates'
           })
         }
       }}>
@@ -916,7 +916,7 @@ export default function PhasesPage() {
                   id="developer"
                   value={form.developer}
                   onChange={(e) => setForm({...form, developer: e.target.value})}
-                  placeholder="e.g. North Town Residency"
+                  placeholder="e.g. Karachi Estates"
                   className="mt-1"
                 />
               </div>
@@ -1215,7 +1215,7 @@ export default function PhasesPage() {
                   features: viewPhase.features || '',
                   image_url: viewPhase.image_url || '',
                   completion_date: viewPhase.completion_date || '',
-                  developer: viewPhase.developer || 'North Town Residency'
+                  developer: viewPhase.developer || 'Karachi Estates'
                 })
                 setViewDialog(false)
                 setDialog(true)

@@ -1,29 +1,36 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export function DynamicFavicon() {
-  const [faviconUrl, setFaviconUrl] = useState('')
-
   useEffect(() => {
     const loadFavicon = async () => {
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('site_settings')
-        .select('setting_value')
-        .eq('setting_key', 'favicon_url')
-        .single()
+      try {
+        const supabase = createClient()
+        const { data } = await supabase
+          .from('site_settings')
+          .select('setting_value')
+          .eq('setting_key', 'favicon_url')
+          .single()
 
-      if (data?.setting_value) {
-        setFaviconUrl(data.setting_value)
-        
-        // Update favicon dynamically
-        const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement || document.createElement('link')
-        link.type = 'image/x-icon'
-        link.rel = 'shortcut icon'
-        link.href = data.setting_value
-        document.getElementsByTagName('head')[0].appendChild(link)
+        const faviconUrl = data?.setting_value || '/logo.png'
+
+        // Update existing favicon links instead of removing
+        const existing = document.querySelectorAll("link[rel*='icon']")
+        if (existing.length > 0) {
+          existing.forEach((el) => {
+            (el as HTMLLinkElement).href = faviconUrl + '?v=' + Date.now()
+          })
+        } else {
+          const link = document.createElement('link')
+          link.rel = 'icon'
+          link.type = 'image/png'
+          link.href = faviconUrl + '?v=' + Date.now()
+          document.head.appendChild(link)
+        }
+      } catch (e) {
+        // silently fail
       }
     }
 

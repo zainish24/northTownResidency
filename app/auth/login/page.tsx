@@ -20,9 +20,9 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [settings, setSettings] = useState({
-    platform_name: 'NTR Properties',
-    tagline: 'North Town Residency',
-    logo_url: '',
+    platform_name: 'Karachi Estates',
+    tagline: 'Karachi Real Estate',
+    logo_url: '/logo.png',
     primary_color: '#10b981',
     secondary_color: '#3b82f6',
   })
@@ -31,11 +31,9 @@ export default function LoginPage() {
     fetch('/api/settings')
       .then(res => res.json())
       .then(data => {
-        if (data.settings) {
-          setSettings(prev => ({ ...prev, ...data.settings }))
-        }
+        if (data.settings) setSettings(prev => ({ ...prev, ...data.settings }))
       })
-      .catch(err => console.error('Failed to load settings:', err))
+      .catch(() => {})
   }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -51,20 +49,16 @@ export default function LoginPage() {
           email: email.trim(),
           password: password,
         })
-        
         if (signInError) throw signInError
         window.location.href = '/dashboard'
       } else {
         const { error: signInError } = await supabase.auth.signInWithOtp({
           email: email.trim(),
         })
-
         if (signInError) throw signInError
         router.push('/auth/check-email')
       }
-
     } catch (error: any) {
-      console.error('Login error:', error)
       if (error.message?.includes('rate limit')) {
         setError('Too many requests. Try password login instead.')
         setUsePassword(true)
@@ -77,30 +71,21 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Side - Background Image */}
+      {/* Left Side */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=2075')",
-          }}
+          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=2075')" }}
         >
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/90 via-emerald-800/80 to-blue-900/90" />
         </div>
-        
+
         <div className="relative z-10 flex flex-col justify-between p-12 text-white">
           <Link href="/" className="flex items-center gap-3 group">
             {settings.logo_url ? (
-              <img 
-                src={settings.logo_url} 
-                alt={settings.platform_name} 
-                className="h-12 w-auto group-hover:scale-105 transition-transform" 
-              />
+              <img src={settings.logo_url} alt={settings.platform_name} className="h-12 w-auto group-hover:scale-105 transition-transform" />
             ) : (
-              <div 
-                className="flex h-12 w-12 items-center justify-center rounded-xl text-white shadow-lg group-hover:shadow-xl transition-all group-hover:scale-105" 
-                style={{ background: `linear-gradient(to bottom right, ${settings.primary_color}, ${settings.secondary_color})` }}
-              >
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl text-white shadow-lg" style={{ background: `linear-gradient(to bottom right, ${settings.primary_color}, ${settings.secondary_color})` }}>
                 <Building2 className="h-6 w-6" />
               </div>
             )}
@@ -112,7 +97,7 @@ export default function LoginPage() {
 
           <div className="space-y-6">
             <h1 className="text-4xl font-bold leading-tight">
-              Find Your Dream Property in North Town Residency
+              Find Your Dream Property in Karachi
             </h1>
             <p className="text-lg text-white/90">
               Browse thousands of verified property listings. Buy, sell, or rent with confidence.
@@ -135,22 +120,14 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right Side - Login Form */}
+      {/* Right Side */}
       <div className="flex-1 flex items-center justify-center p-8 bg-slate-50">
         <div className="w-full max-w-md">
-          {/* Mobile Logo */}
           <Link href="/" className="flex lg:hidden items-center gap-2 mb-8 justify-center group">
             {settings.logo_url ? (
-              <img 
-                src={settings.logo_url} 
-                alt={settings.platform_name} 
-                className="h-10 w-auto group-hover:scale-105 transition-transform" 
-              />
+              <img src={settings.logo_url} alt={settings.platform_name} className="h-10 w-auto" />
             ) : (
-              <div 
-                className="flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-lg group-hover:shadow-xl transition-all group-hover:scale-105" 
-                style={{ background: `linear-gradient(to bottom right, ${settings.primary_color}, ${settings.secondary_color})` }}
-              >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-lg" style={{ background: `linear-gradient(to bottom right, ${settings.primary_color}, ${settings.secondary_color})` }}>
                 <Building2 className="h-5 w-5" />
               </div>
             )}
@@ -162,7 +139,6 @@ export default function LoginPage() {
 
           <Card className="border-0 shadow-xl rounded-2xl overflow-hidden">
             <div className="h-1.5 bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600" />
-            
             <CardHeader className="text-center pt-8 pb-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium mb-3 mx-auto">
                 <Sparkles className="h-3 w-3" />
@@ -184,9 +160,7 @@ export default function LoginPage() {
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium text-slate-700">
-                    Email Address
-                  </Label>
+                  <Label htmlFor="email" className="text-sm font-medium text-slate-700">Email Address</Label>
                   <div className="relative group">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-600 transition-colors" />
                     <Input
@@ -201,15 +175,13 @@ export default function LoginPage() {
                     />
                   </div>
                   <p className="text-xs text-slate-500">
-                    {usePassword ? 'Enter your password' : 'We\'ll send a magic link to your email'}
+                    {usePassword ? 'Enter your password' : "We'll send a magic link to your email"}
                   </p>
                 </div>
 
                 {usePassword && (
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm font-medium text-slate-700">
-                      Password
-                    </Label>
+                    <Label htmlFor="password" className="text-sm font-medium text-slate-700">Password</Label>
                     <Input
                       id="password"
                       type="password"
@@ -229,15 +201,9 @@ export default function LoginPage() {
                   disabled={loading || !email || (usePassword && !password)}
                 >
                   {loading ? (
-                    <>
-                      <Spinner className="h-4 w-4 animate-spin" />
-                      Sending...
-                    </>
+                    <><Spinner className="h-4 w-4 animate-spin" />Sending...</>
                   ) : (
-                    <>
-                      {usePassword ? 'Sign In' : 'Send Magic Link'}
-                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                    </>
+                    <>{usePassword ? 'Sign In' : 'Send Magic Link'}<ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" /></>
                   )}
                 </Button>
 
@@ -261,10 +227,7 @@ export default function LoginPage() {
             </CardContent>
           </Card>
 
-          <Link
-            href="/"
-            className="mt-6 flex items-center justify-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition-colors"
-          >
+          <Link href="/" className="mt-6 flex items-center justify-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
             <ArrowLeft className="h-4 w-4" />
             Back to Home
           </Link>

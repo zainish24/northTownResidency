@@ -525,7 +525,7 @@ export default async function ListingsPage(props: ListingsPageProps) {
               <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight">
                 Properties in{' '}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-400">
-                  North Town Residency
+                  Karachi
                 </span>
               </h1>
 

@@ -121,13 +121,13 @@ export default async function HomePage() {
                 <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.1]">
                   Find Your Dream
                   <span className="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-400">
-                    Property in NTR
+                    Property in Karachi
                   </span>
                 </h1>
 
                 <p className="text-xl text-white/80 max-w-lg leading-relaxed">
-                  Discover premium residential plots, commercial properties, and villas in North Town Residency - 
-                  Karachi's premier housing society with 4 phases and modern amenities.
+                  Discover premium residential plots, commercial properties, and villas in Karachi - 
+                  Pakistan's premier real estate marketplace.
                 </p>
 
                 {/* Search Bar - Premium Glass Effect */}
@@ -319,7 +319,7 @@ export default async function HomePage() {
                   Prime Locations
                 </span>
                 <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
-                  Explore NTR <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600">Phases</span>
+                  Explore <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600">Phases</span>
                 </h2>
               </div>
               <Button variant="ghost" className="text-slate-600 hover:text-emerald-600 group">
@@ -443,7 +443,7 @@ export default async function HomePage() {
                 Why Choose Us
               </span>
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">
-                The <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600">NTR Advantage</span>
+                The <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600">Karachi Estates Advantage</span>
               </h2>
               <p className="text-slate-600 max-w-2xl mx-auto text-base">
                 Experience the best property deals with complete transparency
@@ -546,7 +546,7 @@ export default async function HomePage() {
               Ready to Find Your Dream Property?
             </h2>
             <p className="text-base text-white/90 mb-6 max-w-2xl mx-auto">
-              Join thousands of satisfied customers who found their perfect property in NTR.
+              Join thousands of satisfied customers who found their perfect property in Karachi.
             </p>
             
             <div className="flex flex-wrap gap-4 justify-center">

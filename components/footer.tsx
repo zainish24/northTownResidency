@@ -12,20 +12,20 @@ import { createClient } from '@/lib/supabase/client'
 
 export function Footer() {
   const [settings, setSettings] = useState({
-    platform_name: 'NTR Properties',
-    tagline: 'North Town Residency',
-    logo_url: '',
-    contact_phone: '+92 300 1234567',
+    platform_name: 'Karachi Estates',
+    tagline: 'Karachi Real Estate',
+    logo_url: '/logo.png',
+    contact_phone: '',
     contact_phone_2: '',
-    contact_email: 'info@ntrproperties.pk',
+    contact_email: '',
     whatsapp_number: '',
-    address: 'Surjani Town, near Northern Bypass, Karachi',
+    address: 'Karachi, Pakistan',
     facebook_url: '',
     instagram_url: '',
     twitter_url: '',
     linkedin_url: '',
     youtube_url: '',
-    footer_text: '© 2024 NTR Properties. All rights reserved.',
+    footer_text: '',
   })
   const [phases, setPhases] = useState<any[]>([])
 
@@ -74,7 +74,7 @@ export function Footer() {
             </Link>
             
             <p className="text-xs text-slate-600 leading-relaxed">
-              Pakistan's trusted property marketplace for NTR Karachi. Find verified residential & commercial properties.
+            Pakistan's trusted property marketplace in Karachi. Find verified residential & commercial properties.
             </p>
 
             {/* Trust Badges */}

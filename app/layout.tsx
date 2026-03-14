@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { AuthProvider } from '@/components/auth-provider'
 import { ProgressBar } from '@/components/progress-bar'
 import { DynamicFavicon } from '@/components/dynamic-favicon'
+import { createClient } from '@/lib/supabase/server'
 import './globals.css'
 
 const inter = Inter({ 
@@ -22,82 +23,87 @@ const merriweather = Merriweather({
   display: 'swap',
 })
 
-export const metadata: Metadata = {
-  metadataBase: new URL('https://ntrproperties.com'),
-  title: {
-    default: 'NTR Properties - North Town Residency Karachi',
-    template: '%s | NTR Properties',
-  },
-  description: 'Buy, sell, and rent properties in North Town Residency Karachi. Find residential plots, commercial shops in Phase 1, 2, and 4. Premium real estate marketplace.',
-  keywords: [
-    'North Town Residency', 
-    'Karachi property', 
-    'plots for sale', 
-    'commercial shops', 
-    'NTR Karachi', 
-    'real estate',
-    'property investment',
-    'Karachi real estate',
-    'housing scheme',
-    'residential plots',
-    'commercial property'
-  ],
-  authors: [{ name: 'NTR Properties', url: 'https://ntrproperties.com' }],
-  creator: 'NTR Properties',
-  publisher: 'NTR Properties',
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
-  manifest: '/manifest.json',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: 'NTR Properties',
-    startupImage: [
-      '/icons/apple-splash-2048-2732.jpg',
+async function getSiteSettings() {
+  try {
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from('site_settings')
+      .select('setting_key, setting_value')
+      .in('setting_key', ['platform_name', 'meta_title', 'meta_description', 'logo_url', 'favicon_url'])
+    
+    const settings: Record<string, string> = {}
+    data?.forEach((s: any) => { settings[s.setting_key] = s.setting_value })
+    return settings
+  } catch {
+    return {}
+  }
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSiteSettings()
+  
+  const siteName = settings.platform_name || 'Karachi Estates'
+  const siteUrl = 'https://karachiestates.com'
+  const description = settings.meta_description || 'Buy, sell, and rent properties in Karachi. Premium real estate marketplace.'
+  const logoUrl = settings.logo_url || '/logo.png'
+  const faviconUrl = settings.favicon_url || '/logo.png'
+  const metaTitle = settings.meta_title || siteName
+
+  return {
+    metadataBase: new URL(siteUrl),
+    title: {
+      default: metaTitle,
+      template: `%s | ${siteName}`,
+    },
+    description,
+    keywords: [
+      'Karachi property',
+      'plots for sale',
+      'commercial shops',
+      'real estate',
+      'property investment',
+      'Karachi real estate',
+      'residential plots',
+      'commercial property'
     ],
-  },
-  openGraph: {
-    type: 'website',
-    locale: 'en_PK',
-    siteName: 'NTR Properties',
-    title: 'NTR Properties - North Town Residency Karachi',
-    description: 'Buy, sell, and rent properties in North Town Residency Karachi',
-    url: 'https://ntrproperties.com',
-    images: [
-      {
-        url: '/og-image.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'NTR Properties - North Town Residency Karachi',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'NTR Properties - North Town Residency Karachi',
-    description: 'Buy, sell, and rent properties in North Town Residency Karachi',
-    images: ['/twitter-image.jpg'],
-    creator: '@ntrproperties',
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
+    authors: [{ name: siteName, url: siteUrl }],
+    creator: siteName,
+    publisher: siteName,
+    formatDetection: { email: false, address: false, telephone: false },
+    manifest: '/manifest.json',
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: 'default',
+      title: siteName,
+    },
+    openGraph: {
+      type: 'website',
+      locale: 'en_PK',
+      siteName,
+      title: siteName,
+      description,
+      url: siteUrl,
+      images: [{ url: logoUrl, width: 1200, height: 630, alt: siteName }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: siteName,
+      description,
+      images: [logoUrl],
+    },
+    robots: {
       index: true,
       follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
     },
-  },
-  verification: {
-    google: 'google-site-verification-code',
-    yandex: 'yandex-verification-code',
-  },
-  category: 'real estate',
+    category: 'real estate',
+  }
 }
 
 export const viewport: Viewport = {
@@ -132,14 +138,11 @@ export default function RootLayout({
         {/* DNS Prefetch */}
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
-        
-        {/* Preload critical assets */}
-        <link 
-          rel="preload" 
-          href="/logo.png" 
-          as="image" 
-          type="image/png"
-        />
+
+        {/* Favicon - default, DynamicFavicon will override from DB */}
+        <link rel="icon" type="image/png" href="/logo.png" />
+        <link rel="shortcut icon" type="image/png" href="/logo.png" />
+        <link rel="apple-touch-icon" href="/logo.png" />
       </head>
       <body 
         className="font-sans antialiased min-h-screen bg-background text-foreground scroll-smooth" 

@@ -13,8 +13,8 @@ export default function CheckEmailPage() {
           <Building2 className="h-6 w-6" />
         </div>
         <div className="flex flex-col">
-          <span className="text-xl font-bold leading-none text-slate-900">NTR Properties</span>
-          <span className="text-xs text-slate-500">North Town Residency</span>
+          <span className="text-xl font-bold leading-none text-slate-900">Karachi Estates</span>
+          <span className="text-xs text-slate-500">Karachi Real Estate</span>
         </div>
       </Link>
 

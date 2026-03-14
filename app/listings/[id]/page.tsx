@@ -68,7 +68,7 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
 
   return {
     title: listing.title,
-    description: listing.description || `Property in North Town Residency Karachi. Price: PKR ${listing.price.toLocaleString()}`,
+    description: listing.description || `Property in Karachi. Price: PKR ${listing.price.toLocaleString()}`,
   }
 }
 
@@ -369,7 +369,7 @@ export default async function ListingPage({ params }: ListingPageProps) {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-slate-500">Listing ID:</span>
-                        <span className="font-mono text-slate-700">NTR-{listing.id.slice(0, 6)}</span>
+                        <span className="font-mono text-slate-700">KE-{listing.id.slice(0, 6)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-500">Posted:</span>

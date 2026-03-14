@@ -61,10 +61,10 @@ export default function SiteSettingsPage() {
   })
   const [settings, setSettings] = useState({
     // General - map to database keys
-    platform_name: 'NTR Properties',
-    tagline: 'North Town Residency Classified Ads',
-    logo_url: '',
-    favicon_url: '',
+    platform_name: 'Karachi Estates',
+    tagline: 'Karachi Real Estate',
+    logo_url: '/logo.png',
+    favicon_url: '/favicon.ico',
     watermark_url: '',
     primary_color: '#10b981',
     secondary_color: '#3b82f6',
@@ -72,31 +72,31 @@ export default function SiteSettingsPage() {
     date_format: 'DD/MM/YYYY',
     
     // Contact
-    contact_phone: '+92 300 1234567',
+    contact_phone: '',
     contact_phone_2: '',
-    contact_email: 'info@ntrproperties.pk',
-    whatsapp_number: '+923001234567',
+    contact_email: '',
+    whatsapp_number: '',
     support_hours: '24/7',
-    address: 'North Town Residency, Karachi',
+    address: 'Karachi, Pakistan',
     map_url: '',
     
     // Social
-    facebook_url: 'https://facebook.com/ntrproperties',
-    instagram_url: 'https://instagram.com/ntrproperties',
+    facebook_url: '',
+    instagram_url: '',
     twitter_url: '',
     linkedin_url: '',
     youtube_url: '',
     
     // Content
-    about_us: 'NTR Properties is the premier platform for buying, selling, and renting properties in North Town Residency, Karachi.',
-    terms_conditions: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit...',
-    privacy_policy: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit...',
-    footer_text: '© 2024 NTR Properties. All rights reserved.',
+    about_us: 'Karachi Estates is the premier platform for buying, selling, and renting properties in Karachi.',
+    terms_conditions: '',
+    privacy_policy: '',
+    footer_text: `© ${new Date().getFullYear()} Karachi Estates. All rights reserved.`,
     
     // SEO
-    meta_title: 'NTR Properties - North Town Residency Karachi',
-    meta_description: 'Find residential plots, commercial shops, and properties in North Town Residency Karachi.',
-    meta_keywords: 'NTR, North Town Residency, Karachi property, real estate',
+    meta_title: 'Karachi Estates - Karachi Real Estate',
+    meta_description: 'Find residential plots, commercial shops, and properties in Karachi.',
+    meta_keywords: 'Karachi property, real estate, plots for sale, commercial shops',
     google_analytics_id: '',
     google_site_verification: '',
     
@@ -109,7 +109,7 @@ export default function SiteSettingsPage() {
     // OTP/SMS
     sms_provider: 'mock',
     sms_api_key: '',
-    sms_sender_id: 'NTR',
+    sms_sender_id: 'KE',
     twilio_account_sid: '',
     twilio_auth_token: '',
     
@@ -648,7 +648,7 @@ export default function SiteSettingsPage() {
                     <Input 
                       value={settings.contact_email} 
                       onChange={(e) => handleInputChange('contact_email', e.target.value)}
-                      placeholder="info@ntrproperties.pk"
+                      placeholder="info@karachiestates.pk"
                       className="mt-1"
                     />
                   </div>
@@ -660,7 +660,7 @@ export default function SiteSettingsPage() {
                     rows={2}
                     value={settings.address} 
                     onChange={(e) => handleInputChange('address', e.target.value)}
-                    placeholder="North Town Residency, Karachi"
+                    placeholder="Karachi, Karachi"
                     className="mt-1"
                   />
                 </div>
@@ -687,7 +687,7 @@ export default function SiteSettingsPage() {
                     <Input 
                       value={settings.facebook_url} 
                       onChange={(e) => handleInputChange('facebook_url', e.target.value)}
-                      placeholder="https://facebook.com/ntrproperties"
+                      placeholder="https://facebook.com/karachiestates"
                       className="mt-1"
                     />
                   </div>
@@ -699,7 +699,7 @@ export default function SiteSettingsPage() {
                     <Input 
                       value={settings.instagram_url} 
                       onChange={(e) => handleInputChange('instagram_url', e.target.value)}
-                      placeholder="https://instagram.com/ntrproperties"
+                      placeholder="https://instagram.com/karachiestates"
                       className="mt-1"
                     />
                   </div>
@@ -716,7 +716,7 @@ export default function SiteSettingsPage() {
                     <Input 
                       value={settings.twitter_url} 
                       onChange={(e) => handleInputChange('twitter_url', e.target.value)}
-                      placeholder="https://twitter.com/ntrproperties"
+                      placeholder="https://twitter.com/karachiestates"
                       className="mt-1"
                     />
                   </div>
@@ -728,7 +728,7 @@ export default function SiteSettingsPage() {
                     <Input 
                       value={settings.linkedin_url} 
                       onChange={(e) => handleInputChange('linkedin_url', e.target.value)}
-                      placeholder="https://linkedin.com/company/ntrproperties"
+                      placeholder="https://linkedin.com/company/karachiestates"
                       className="mt-1"
                     />
                   </div>
@@ -742,7 +742,7 @@ export default function SiteSettingsPage() {
                   <Input 
                     value={settings.youtube_url} 
                     onChange={(e) => handleInputChange('youtube_url', e.target.value)}
-                    placeholder="https://youtube.com/@ntrproperties"
+                    placeholder="https://youtube.com/@karachiestates"
                     className="mt-1"
                   />
                 </div>
@@ -798,7 +798,7 @@ export default function SiteSettingsPage() {
                   <Input 
                     value={settings.footer_text} 
                     onChange={(e) => handleInputChange('footer_text', e.target.value)}
-                    placeholder="© 2024 NTR Properties. All rights reserved."
+                    placeholder="© 2024 Karachi Estates. All rights reserved."
                     className="mt-1"
                   />
                 </div>
@@ -821,7 +821,7 @@ export default function SiteSettingsPage() {
                   <Input 
                     value={settings.meta_title} 
                     onChange={(e) => handleInputChange('meta_title', e.target.value)}
-                    placeholder="NTR Properties - North Town Residency Karachi"
+                    placeholder="Karachi Estates - Karachi Karachi"
                     className="mt-1"
                   />
                   <p className="text-xs text-slate-500 mt-1">Recommended: 50-60 characters</p>
@@ -833,7 +833,7 @@ export default function SiteSettingsPage() {
                     rows={3}
                     value={settings.meta_description} 
                     onChange={(e) => handleInputChange('meta_description', e.target.value)}
-                    placeholder="Find residential plots, commercial shops, and properties in North Town Residency Karachi."
+                    placeholder="Find residential plots, commercial shops, and properties in Karachi Karachi."
                     className="mt-1"
                   />
                   <p className="text-xs text-slate-500 mt-1">Recommended: 150-160 characters</p>
@@ -844,7 +844,7 @@ export default function SiteSettingsPage() {
                   <Input 
                     value={settings.meta_keywords} 
                     onChange={(e) => handleInputChange('meta_keywords', e.target.value)}
-                    placeholder="NTR, North Town Residency, Karachi property, real estate"
+                    placeholder="Karachi, Karachi, Karachi property, real estate"
                     className="mt-1"
                   />
                   <p className="text-xs text-slate-500 mt-1">Comma separated keywords</p>

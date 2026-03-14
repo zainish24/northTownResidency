@@ -33,9 +33,9 @@ export function Header() {
   const [selectedNotification, setSelectedNotification] = useState<any>(null)
   const [notificationModal, setNotificationModal] = useState(false)
   const [settings, setSettings] = useState({
-    platform_name: 'NTR Properties',
-    tagline: 'North Town Residency',
-    logo_url: '',
+    platform_name: 'Karachi Estates',
+    tagline: 'Karachi Real Estate',
+    logo_url: '/logo.png',
     primary_color: '#10b981',
     secondary_color: '#3b82f6',
   })

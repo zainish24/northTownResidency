@@ -21,9 +21,9 @@ export default function SignupPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [settings, setSettings] = useState({
-    platform_name: 'NTR Properties',
-    tagline: 'North Town Residency',
-    logo_url: '',
+    platform_name: 'Karachi Estates',
+    tagline: 'Karachi Real Estate',
+    logo_url: '/logo.png',
     primary_color: '#10b981',
     secondary_color: '#3b82f6',
   })
