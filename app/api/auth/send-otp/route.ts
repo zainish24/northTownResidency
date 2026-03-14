@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { SMSService } from '@/lib/sms-service'
-import { TEST_MODE, getTestOTP } from '@/lib/test-config'
+import twilio from 'twilio'
+
+const client = twilio(
+  process.env.TWILIO_ACCOUNT_SID!,
+  process.env.TWILIO_AUTH_TOKEN!
+)
 
 export async function POST(request: Request) {
   try {
@@ -11,15 +14,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Phone number required' }, { status: 400 })
     }
 
-    // TEMPORARY: Skip SMS for testing - any OTP will work
-    console.log(`📱 Login attempt for: ${phone}`)
+    const formatted = phone.startsWith('+') ? phone : `+92${phone.replace(/^0/, '')}`
 
-    return NextResponse.json({ 
-      success: true,
-      message: 'Enter any 6-digit OTP to continue (test mode)'
-    })
-  } catch (error) {
+    const verification = await client.verify.v2
+      .services(process.env.TWILIO_VERIFY_SERVICE_SID!)
+      .verifications.create({ to: formatted, channel: 'sms' })
+
+    if (verification.status !== 'pending') {
+      return NextResponse.json({ error: 'Failed to send OTP' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
     console.error('Send OTP error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Failed to send OTP' }, { status: 500 })
   }
 }

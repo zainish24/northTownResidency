@@ -1,49 +1,77 @@
 import { NextResponse } from 'next/server'
+import twilio from 'twilio'
 import { createClient } from '@/lib/supabase/server'
+
+const client = twilio(
+  process.env.TWILIO_ACCOUNT_SID!,
+  process.env.TWILIO_AUTH_TOKEN!
+)
 
 export async function POST(request: Request) {
   try {
-    const { phone, otp } = await request.json()
-
-    console.log('Login attempt - Phone:', phone, 'OTP:', otp)
+    const { phone, otp, name } = await request.json()
 
     if (!phone || !otp) {
       return NextResponse.json({ error: 'Phone and OTP required' }, { status: 400 })
     }
 
-    // TESTING MODE: Accept any 6-digit OTP
-    if (otp.length !== 6) {
-      return NextResponse.json({ error: 'OTP must be 6 digits' }, { status: 400 })
+    const formatted = phone.startsWith('+') ? phone : `+92${phone.replace(/^0/, '')}`
+
+    // Step 1: Verify OTP with Twilio
+    let result
+    try {
+      result = await client.verify.v2
+        .services(process.env.TWILIO_VERIFY_SERVICE_SID!)
+        .verificationChecks.create({ to: formatted, code: otp })
+    } catch (twilioError: any) {
+      if (twilioError.status === 404) {
+        return NextResponse.json({ error: 'OTP expired or already used. Please request a new one.' }, { status: 400 })
+      }
+      throw twilioError
     }
 
+    if (result.status !== 'approved') {
+      return NextResponse.json({ error: 'Invalid OTP. Please try again.' }, { status: 400 })
+    }
+
+    // Step 2: Use Supabase phone auth (no email involved)
     const supabase = await createClient()
-    
-    // Create temp email from phone for auth
-    const tempEmail = `${phone.replace(/[^0-9]/g, '')}@ntr.temp`
-    const tempPassword = 'NTR2024temp'
 
-    console.log('Trying to sign in with email:', tempEmail)
-
-    // Try to sign in
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: tempEmail,
-      password: tempPassword
+    // Try sign in with phone
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      phone: formatted,
+      password: `KE@${formatted.replace(/\+/g, '')}#2024`,
     })
 
-    if (signInError) {
-      console.log('Sign in error:', signInError.message)
-      return NextResponse.json({ 
-        error: 'Invalid phone number or user not found' 
-      }, { status: 404 })
+    if (!signInError && signInData.session) {
+      return NextResponse.json({ success: true, session: signInData.session })
     }
 
-    console.log('Login successful!')
-    return NextResponse.json({ 
-      success: true,
-      message: 'Login successful'
+    // User doesn't exist — sign up with phone
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      phone: formatted,
+      password: `KE@${formatted.replace(/\+/g, '')}#2024`,
     })
-  } catch (error) {
+
+    if (signUpError) {
+      return NextResponse.json({ error: signUpError.message }, { status: 500 })
+    }
+
+    // Create profile
+    if (signUpData.user) {
+      await supabase.from('profiles').upsert({
+        id: signUpData.user.id,
+        phone: formatted,
+        full_name: name || null,
+        role: 'user',
+        is_active: true,
+      })
+    }
+
+    return NextResponse.json({ success: true, session: signUpData.session })
+
+  } catch (error: any) {
     console.error('Verify OTP error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Verification failed' }, { status: 500 })
   }
 }
