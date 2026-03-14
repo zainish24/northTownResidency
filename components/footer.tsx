@@ -12,14 +12,14 @@ import { createClient } from '@/lib/supabase/client'
 
 export function Footer() {
   const [settings, setSettings] = useState({
-    platform_name: 'Karachi Estates',
-    tagline: 'Karachi Real Estate',
-    logo_url: '/logo.png',
+    platform_name: '',
+    tagline: '',
+    logo_url: '',
     contact_phone: '',
     contact_phone_2: '',
     contact_email: '',
     whatsapp_number: '',
-    address: 'Karachi, Pakistan',
+    address: '',
     facebook_url: '',
     instagram_url: '',
     twitter_url: '',
@@ -27,6 +27,7 @@ export function Footer() {
     youtube_url: '',
     footer_text: '',
   })
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
   const [phases, setPhases] = useState<any[]>([])
 
   useEffect(() => {
@@ -36,8 +37,9 @@ export function Footer() {
         if (data.settings) {
           setSettings(prev => ({ ...prev, ...data.settings }))
         }
+        setSettingsLoaded(true)
       })
-      .catch(err => console.error('Failed to load settings:', err))
+      .catch(err => { console.error('Failed to load settings:', err); setSettingsLoaded(true) })
 
     // Fetch phases
     const supabase = createClient()
@@ -59,17 +61,29 @@ export function Footer() {
           <div className="space-y-3">
             <Link href="/" className="inline-block group">
               <div className="flex items-center gap-2">
-                {settings.logo_url ? (
-                  <img src={settings.logo_url} alt={settings.platform_name} className="h-10 w-auto group-hover:scale-105 transition-transform" />
+                {!settingsLoaded ? (
+                  <>
+                    <div className="h-10 w-10 rounded-xl bg-slate-200 animate-pulse" />
+                    <div className="flex flex-col gap-1">
+                      <div className="h-4 w-28 bg-slate-200 rounded animate-pulse" />
+                      <div className="h-2.5 w-20 bg-slate-100 rounded animate-pulse" />
+                    </div>
+                  </>
                 ) : (
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-600 to-blue-600 text-white shadow-lg group-hover:scale-105 transition-transform">
-                    <Building2 className="h-5 w-5" />
-                  </div>
+                  <>
+                    {settings.logo_url ? (
+                      <img src={settings.logo_url} alt={settings.platform_name} className="h-10 w-auto group-hover:scale-105 transition-transform" />
+                    ) : (
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-600 to-blue-600 text-white shadow-lg group-hover:scale-105 transition-transform">
+                        <Building2 className="h-5 w-5" />
+                      </div>
+                    )}
+                    <div>
+                      <span className="font-bold text-lg text-slate-900 block">{settings.platform_name || 'Karachi Estates'}</span>
+                      <span className="text-[10px] text-slate-500">{settings.tagline || 'Karachi Real Estate'}</span>
+                    </div>
+                  </>
                 )}
-                <div>
-                  <span className="font-bold text-lg text-slate-900 block">{settings.platform_name}</span>
-                  <span className="text-[10px] text-slate-500">{settings.tagline}</span>
-                </div>
               </div>
             </Link>
             
@@ -217,7 +231,7 @@ export function Footer() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col md:flex-row justify-center items-center gap-3 text-xs">
             <p className="text-slate-600">
-              {settings.footer_text || `© ${new Date().getFullYear()} ${settings.platform_name}. All rights reserved.`}
+              {settings.footer_text || `© ${new Date().getFullYear()} Karachi Estates. All rights reserved.`}
             </p>
           </div>
         </div>

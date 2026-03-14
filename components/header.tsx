@@ -33,12 +33,13 @@ export function Header() {
   const [selectedNotification, setSelectedNotification] = useState<any>(null)
   const [notificationModal, setNotificationModal] = useState(false)
   const [settings, setSettings] = useState({
-    platform_name: 'Karachi Estates',
-    tagline: 'Karachi Real Estate',
-    logo_url: '/logo.png',
+    platform_name: '',
+    tagline: '',
+    logo_url: '',
     primary_color: '#10b981',
     secondary_color: '#3b82f6',
   })
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
   const [propertyTypes, setPropertyTypes] = useState<any[]>([])
 
   useEffect(() => {
@@ -51,8 +52,9 @@ export function Header() {
         if (data.settings) {
           setSettings(prev => ({ ...prev, ...data.settings }))
         }
+        setSettingsLoaded(true)
       })
-      .catch(err => console.error('Failed to load settings:', err))
+      .catch(() => setSettingsLoaded(true))
 
     // Fetch active property types
     supabase
@@ -146,22 +148,34 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-xl shadow-sm border-b border-slate-200/80">
+    <header suppressHydrationWarning className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-xl shadow-sm border-b border-slate-200/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            {settings.logo_url ? (
-              <img src={settings.logo_url} alt={settings.platform_name} className="h-10 w-auto group-hover:scale-105 transition-transform" />
+            {!settingsLoaded ? (
+              <>
+                <div className="h-10 w-10 rounded-xl bg-slate-200 animate-pulse" />
+                <div className="flex flex-col gap-1">
+                  <div className="h-4 w-28 bg-slate-200 rounded animate-pulse" />
+                  <div className="h-2.5 w-20 bg-slate-100 rounded animate-pulse" />
+                </div>
+              </>
             ) : (
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-lg group-hover:shadow-xl transition-all group-hover:scale-105" style={{ background: `linear-gradient(to bottom right, ${settings.primary_color}, ${settings.secondary_color || '#3b82f6'})` }}>
-                <Building2 className="h-5 w-5" />
-              </div>
+              <>
+                {settings.logo_url ? (
+                  <img src={settings.logo_url} alt={settings.platform_name || 'Karachi Estates'} className="h-10 w-auto group-hover:scale-105 transition-transform" />
+                ) : (
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-lg group-hover:shadow-xl transition-all group-hover:scale-105" style={{ background: `linear-gradient(to bottom right, ${settings.primary_color}, ${settings.secondary_color || '#3b82f6'})` }}>
+                    <Building2 className="h-5 w-5" />
+                  </div>
+                )}
+                <div className="flex flex-col">
+                  <span className="font-bold text-base text-slate-900 leading-tight">{settings.platform_name || 'Karachi Estates'}</span>
+                  <span className="text-[10px] text-slate-500">{settings.tagline || 'Karachi Real Estate'}</span>
+                </div>
+              </>
             )}
-            <div className="flex flex-col">
-              <span className="font-bold text-base text-slate-900 leading-tight">{settings.platform_name}</span>
-              <span className="text-[10px] text-slate-500">{settings.tagline}</span>
-            </div>
           </Link>
 
           {/* Desktop Navigation */}

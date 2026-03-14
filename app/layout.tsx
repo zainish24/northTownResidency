@@ -6,7 +6,6 @@ import { Toaster } from '@/components/ui/sonner'
 import { ThemeProvider } from '@/components/theme-provider'
 import { AuthProvider } from '@/components/auth-provider'
 import { ProgressBar } from '@/components/progress-bar'
-import { DynamicFavicon } from '@/components/dynamic-favicon'
 import { createClient } from '@/lib/supabase/server'
 import './globals.css'
 
@@ -23,13 +22,15 @@ const merriweather = Merriweather({
   display: 'swap',
 })
 
+export const revalidate = 0
+
 async function getSiteSettings() {
   try {
     const supabase = await createClient()
     const { data } = await supabase
       .from('site_settings')
       .select('setting_key, setting_value')
-      .in('setting_key', ['platform_name', 'meta_title', 'meta_description', 'logo_url', 'favicon_url'])
+      .in('setting_key', ['platform_name', 'meta_title', 'meta_description', 'logo_url', 'favicon_url', 'site_favicon', 'site_logo'])
     
     const settings: Record<string, string> = {}
     data?.forEach((s: any) => { settings[s.setting_key] = s.setting_value })
@@ -118,11 +119,14 @@ export const viewport: Viewport = {
   colorScheme: 'light dark',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const settings = await getSiteSettings()
+  const faviconUrl = settings.favicon_url || settings.site_favicon || settings.logo_url || settings.site_logo || '/logo.png'
+
   return (
     <html 
       lang="en" 
@@ -130,19 +134,14 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        {/* Preconnect to important domains */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://images.unsplash.com" />
-        
-        {/* DNS Prefetch */}
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
-
-        {/* Favicon - default, DynamicFavicon will override from DB */}
-        <link rel="icon" type="image/png" href="/logo.png" />
-        <link rel="shortcut icon" type="image/png" href="/logo.png" />
-        <link rel="apple-touch-icon" href="/logo.png" />
+        <link rel="icon" type="image/png" href={faviconUrl} />
+        <link rel="shortcut icon" type="image/png" href={faviconUrl} />
+        <link rel="apple-touch-icon" href={faviconUrl} />
       </head>
       <body 
         className="font-sans antialiased min-h-screen bg-background text-foreground scroll-smooth" 
@@ -157,27 +156,15 @@ export default function RootLayout({
         >
           {/* Auth Provider for user session */}
           <AuthProvider>
-            {/* Dynamic Favicon */}
-            <DynamicFavicon />
-            
-            {/* Progress Bar for navigation */}
             <ProgressBar />
-            
-            {/* Main Content */}
             {children}
-            
-            {/* Toast Notifications */}
             <Toaster 
               richColors 
               position="top-right"
               closeButton
               theme="light"
             />
-            
-            {/* Vercel Analytics */}
             <Analytics />
-            
-            {/* Vercel Speed Insights */}
             <SpeedInsights />
           </AuthProvider>
         </ThemeProvider>
