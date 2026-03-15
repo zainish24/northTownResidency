@@ -45,7 +45,17 @@ export default function LoginPage() {
   const formatPhone = (val: string) => val.replace(/\D/g, '').slice(0, 11)
 
   const sendOtp = async () => {
-    const res = await fetch('/api/auth/phone-login', {
+    // Check account exists
+    const checkRes = await fetch('/api/auth/check-phone', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+    })
+    const checkData = await checkRes.json()
+    if (!checkRes.ok) throw new Error(checkData.error)
+
+    // Send OTP
+    const res = await fetch('/api/auth/send-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone }),
@@ -91,7 +101,7 @@ export default function LoginPage() {
     if (code.length !== 6) { setError('Please enter the complete 6-digit OTP'); return }
     setLoading(true)
     try {
-      const res = await fetch('/api/auth/phone-login', {
+      const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, otp: code }),
