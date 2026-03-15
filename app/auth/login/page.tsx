@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,17 +8,15 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Spinner } from '@/components/ui/spinner'
-import { Building2, Phone, ArrowRight, AlertCircle, ArrowLeft, Sparkles, CheckCircle2 } from 'lucide-react'
+import { Building2, Phone, ArrowRight, AlertCircle, ArrowLeft, Sparkles, Lock, Eye, EyeOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
   const [phone, setPhone] = useState('')
-  const [otp, setOtp] = useState(['', '', '', '', '', ''])
-  const [step, setStep] = useState<'phone' | 'otp'>('phone')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [resendTimer, setResendTimer] = useState(0)
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([])
   const [settings, setSettings] = useState({
     platform_name: 'Karachi Estates',
     tagline: 'Karachi Real Estate',
@@ -35,76 +33,19 @@ export default function LoginPage() {
       .catch(() => setSettingsLoaded(true))
   }, [])
 
-  useEffect(() => {
-    if (resendTimer > 0) {
-      const t = setTimeout(() => setResendTimer(r => r - 1), 1000)
-      return () => clearTimeout(t)
-    }
-  }, [resendTimer])
-
   const formatPhone = (val: string) => val.replace(/\D/g, '').slice(0, 11)
 
-  const sendOtp = async () => {
-    // Check account exists
-    const checkRes = await fetch('/api/auth/check-phone', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone }),
-    })
-    const checkData = await checkRes.json()
-    if (!checkRes.ok) throw new Error(checkData.error)
-
-    // Send OTP
-    const res = await fetch('/api/auth/send-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone }),
-    })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error)
-    setStep('otp')
-    setResendTimer(60)
-    setTimeout(() => otpRefs.current[0]?.focus(), 100)
-  }
-
-  const handleSendOtp = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     if (phone.length < 10) { setError('Please enter a valid Pakistani phone number'); return }
-    setLoading(true)
-    try { await sendOtp() }
-    catch (err: any) { setError(err.message || 'Failed to send OTP') }
-    finally { setLoading(false) }
-  }
-
-  const handleOtpChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return
-    const newOtp = [...otp]
-    newOtp[index] = value.slice(-1)
-    setOtp(newOtp)
-    if (value && index < 5) otpRefs.current[index + 1]?.focus()
-  }
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) otpRefs.current[index - 1]?.focus()
-  }
-
-  const handleOtpPaste = (e: React.ClipboardEvent) => {
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
-    if (pasted.length === 6) { setOtp(pasted.split('')); otpRefs.current[5]?.focus() }
-  }
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    const code = otp.join('')
-    if (code.length !== 6) { setError('Please enter the complete 6-digit OTP'); return }
+    if (password.length < 6) { setError('Password must be at least 6 characters'); return }
     setLoading(true)
     try {
-      const res = await fetch('/api/auth/verify-otp', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp: code }),
+        body: JSON.stringify({ phone, password }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -119,7 +60,7 @@ export default function LoginPage() {
       }
       window.location.href = '/dashboard'
     } catch (err: any) {
-      setError(err.message || 'Invalid OTP. Please try again.')
+      setError(err.message || 'Login failed')
     } finally {
       setLoading(false)
     }
@@ -186,14 +127,10 @@ export default function LoginPage() {
             <CardHeader className="text-center pt-8 pb-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium mb-3 mx-auto">
                 <Sparkles className="h-3 w-3" />
-                {step === 'phone' ? 'Welcome Back' : 'Verify OTP'}
+                Welcome Back
               </div>
-              <CardTitle className="text-2xl font-bold text-slate-900">
-                {step === 'phone' ? 'Sign In' : 'Enter OTP'}
-              </CardTitle>
-              <CardDescription className="text-slate-500 text-sm">
-                {step === 'phone' ? 'Enter your registered phone number' : `OTP sent to +92${phone.replace(/^0/, '')}`}
-              </CardDescription>
+              <CardTitle className="text-2xl font-bold text-slate-900">Sign In</CardTitle>
+              <CardDescription className="text-slate-500 text-sm">Enter your phone number and password</CardDescription>
             </CardHeader>
 
             <CardContent className="px-8 pb-8">
@@ -204,88 +141,64 @@ export default function LoginPage() {
                 </Alert>
               )}
 
-              {step === 'phone' ? (
-                <form onSubmit={handleSendOtp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-slate-700">Phone Number</Label>
-                    <div className="relative group">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-                        <Phone className="h-4 w-4 text-slate-400 group-focus-within:text-emerald-600 transition-colors" />
-                        <span className="text-sm text-slate-500 border-r border-slate-200 pr-2">+92</span>
-                      </div>
-                      <Input
-                        type="tel"
-                        placeholder="03001234567"
-                        value={phone}
-                        onChange={(e) => setPhone(formatPhone(e.target.value))}
-                        className="pl-20 h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all"
-                        required
-                        disabled={loading}
-                      />
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">Phone Number</Label>
+                  <div className="relative group">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                      <Phone className="h-4 w-4 text-slate-400 group-focus-within:text-emerald-600 transition-colors" />
+                      <span className="text-sm text-slate-500 border-r border-slate-200 pr-2">+92</span>
                     </div>
+                    <Input
+                      type="tel"
+                      placeholder="03001234567"
+                      value={phone}
+                      onChange={(e) => setPhone(formatPhone(e.target.value))}
+                      className="pl-20 h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all"
+                      required
+                      disabled={loading}
+                    />
                   </div>
+                </div>
 
-                  <Button
-                    type="submit"
-                    className="w-full h-11 gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all group"
-                    disabled={loading || phone.length < 10}
-                  >
-                    {loading ? <><Spinner className="h-4 w-4" />Sending OTP...</> : <>Send OTP<ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" /></>}
-                  </Button>
-
-                  <div className="text-center">
-                    <p className="text-sm text-slate-600">
-                      Don't have an account?{' '}
-                      <Link href="/auth/signup" className="text-emerald-600 hover:text-emerald-700 font-medium hover:underline">Sign Up</Link>
-                    </p>
-                  </div>
-                </form>
-              ) : (
-                <form onSubmit={handleVerifyOtp} className="space-y-6">
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium text-slate-700">6-Digit OTP</Label>
-                    <div className="flex gap-2 justify-between" onPaste={handleOtpPaste}>
-                      {otp.map((digit, i) => (
-                        <input
-                          key={i}
-                          ref={el => { otpRefs.current[i] = el }}
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={1}
-                          value={digit}
-                          onChange={e => handleOtpChange(i, e.target.value)}
-                          onKeyDown={e => handleOtpKeyDown(i, e)}
-                          className="w-12 h-12 text-center text-lg font-bold border-2 rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all bg-white"
-                        />
-                      ))}
-                    </div>
-                    <p className="text-xs text-slate-500 text-center">OTP expires in 10 minutes</p>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full h-11 gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all"
-                    disabled={loading || otp.join('').length !== 6}
-                  >
-                    {loading ? <><Spinner className="h-4 w-4" />Verifying...</> : <><CheckCircle2 className="h-4 w-4" />Verify & Sign In</>}
-                  </Button>
-
-                  <div className="flex items-center justify-between text-sm">
-                    <button type="button" onClick={() => { setStep('phone'); setOtp(['', '', '', '', '', '']); setError('') }}
-                      className="text-slate-500 hover:text-slate-700 transition-colors">
-                      ← Change Number
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">Password</Label>
+                  <div className="relative group">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-600 transition-colors" />
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10 pr-10 h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all"
+                      required
+                      disabled={loading}
+                    />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
-                    {resendTimer > 0 ? (
-                      <span className="text-slate-400">Resend in {resendTimer}s</span>
-                    ) : (
-                      <button type="button" onClick={handleSendOtp as any}
-                        className="text-emerald-600 hover:text-emerald-700 font-medium transition-colors">
-                        Resend OTP
-                      </button>
-                    )}
                   </div>
-                </form>
-              )}
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full h-11 gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all group"
+                  disabled={loading || phone.length < 10 || password.length < 6}
+                >
+                  {loading ? <><Spinner className="h-4 w-4" />Signing in...</> : <>Sign In<ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" /></>}
+                </Button>
+
+                <div className="text-center space-y-2">
+                  <Link href="/auth/forgot-password" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium hover:underline block">
+                    Forgot Password?
+                  </Link>
+                  <p className="text-sm text-slate-600">
+                    Don't have an account?{' '}
+                    <Link href="/auth/signup" className="text-emerald-600 hover:text-emerald-700 font-medium hover:underline">Sign Up</Link>
+                  </p>
+                </div>
+              </form>
             </CardContent>
           </Card>
 

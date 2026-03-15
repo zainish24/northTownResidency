@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,23 +8,26 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Spinner } from '@/components/ui/spinner'
-import {
-  Building2, Phone, ArrowRight, AlertCircle, User,
-  Sparkles, CheckCircle, CheckCircle2, ArrowLeft
-} from 'lucide-react'
+import { Building2, Phone, ArrowRight, AlertCircle, User, Sparkles, CheckCircle, ArrowLeft, Lock, Eye, EyeOff, Briefcase } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
+const USER_TYPES = [
+  { value: 'individual', emoji: '👤', label: 'Individual' },
+  { value: 'agent', emoji: '🏢', label: 'Agent' },
+  { value: 'developer', emoji: '🏗️', label: 'Developer' },
+]
 
 export default function SignupPage() {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [userType, setUserType] = useState('individual')
-  const [otp, setOtp] = useState(['', '', '', '', '', ''])
-  const [step, setStep] = useState<'form' | 'otp'>('form')
+  const [agencyName, setAgencyName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [resendTimer, setResendTimer] = useState(0)
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([])
   const [settings, setSettings] = useState({
     platform_name: 'Karachi Estates',
     tagline: 'Karachi Real Estate',
@@ -38,85 +41,31 @@ export default function SignupPage() {
     fetch('/api/settings')
       .then(res => res.json())
       .then(data => { if (data.settings) setSettings(prev => ({ ...prev, ...data.settings })); setSettingsLoaded(true) })
-      .catch(() => { setSettingsLoaded(true) })
+      .catch(() => setSettingsLoaded(true))
   }, [])
-
-  useEffect(() => {
-    if (resendTimer > 0) {
-      const t = setTimeout(() => setResendTimer(r => r - 1), 1000)
-      return () => clearTimeout(t)
-    }
-  }, [resendTimer])
 
   const formatPhone = (val: string) => val.replace(/\D/g, '').slice(0, 11)
 
-  const handleSendOtp = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    if (phone.length < 10) {
-      setError('Please enter a valid Pakistani phone number')
+    if (phone.length < 10) { setError('Please enter a valid Pakistani phone number'); return }
+    if (password.length < 6) { setError('Password must be at least 6 characters'); return }
+    if (password !== confirmPassword) { setError('Passwords do not match'); return }
+    if ((userType === 'agent' || userType === 'developer') && !agencyName.trim()) {
+      setError(`Please enter your ${userType === 'agent' ? 'agency' : 'company'} name`)
       return
     }
     setLoading(true)
     try {
-      const res = await fetch('/api/auth/send-otp', {
+      const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      setStep('otp')
-      setResendTimer(60)
-      setTimeout(() => otpRefs.current[0]?.focus(), 100)
-    } catch (err: any) {
-      setError(err.message || 'Failed to send OTP')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleOtpChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return
-    const newOtp = [...otp]
-    newOtp[index] = value.slice(-1)
-    setOtp(newOtp)
-    if (value && index < 5) otpRefs.current[index + 1]?.focus()
-  }
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      otpRefs.current[index - 1]?.focus()
-    }
-  }
-
-  const handleOtpPaste = (e: React.ClipboardEvent) => {
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
-    if (pasted.length === 6) {
-      setOtp(pasted.split(''))
-      otpRefs.current[5]?.focus()
-    }
-  }
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    const code = otp.join('')
-    if (code.length !== 6) {
-      setError('Please enter the complete 6-digit OTP')
-      return
-    }
-    setLoading(true)
-    try {
-      const res = await fetch('/api/auth/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp: code, name, userType }),
+        body: JSON.stringify({ phone, password, name, userType, agencyName: agencyName.trim() || null }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
 
-      // Set session client side
       if (data.session) {
         const supabase = createClient()
         await supabase.auth.setSession({
@@ -127,7 +76,7 @@ export default function SignupPage() {
       }
       window.location.href = '/dashboard'
     } catch (err: any) {
-      setError(err.message || 'Invalid OTP. Please try again.')
+      setError(err.message || 'Signup failed')
     } finally {
       setLoading(false)
     }
@@ -164,7 +113,6 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Side */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         <div className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: "url('https://images.unsplash.com/photo-1582407947304-fd86f028f716?q=80&w=1996')" }}>
@@ -174,9 +122,7 @@ export default function SignupPage() {
           <Link href="/"><LogoSection white /></Link>
           <div className="space-y-6">
             <h1 className="text-4xl font-bold leading-tight">Start Your Property Journey Today</h1>
-            <p className="text-lg text-white/90">
-              Join thousands of property owners and buyers. Post listings, connect with buyers, and grow your business.
-            </p>
+            <p className="text-lg text-white/90">Join thousands of property owners and buyers.</p>
             <div className="space-y-3 pt-4">
               {['Post unlimited property listings', 'Connect with verified buyers', 'Get instant notifications', '24/7 customer support'].map((item, i) => (
                 <div key={i} className="flex items-center gap-3">
@@ -189,7 +135,6 @@ export default function SignupPage() {
         </div>
       </div>
 
-      {/* Right Side */}
       <div className="flex-1 flex items-center justify-center p-8 bg-slate-50">
         <div className="w-full max-w-md">
           <Link href="/" className="flex lg:hidden items-center gap-2 mb-8 justify-center">
@@ -201,16 +146,10 @@ export default function SignupPage() {
             <CardHeader className="text-center pt-8 pb-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium mb-3 mx-auto">
                 <Sparkles className="h-3 w-3" />
-                {step === 'form' ? `Join ${settings.platform_name}` : 'Verify OTP'}
+                Join {settings.platform_name}
               </div>
-              <CardTitle className="text-2xl font-bold text-slate-900">
-                {step === 'form' ? 'Create Account' : 'Enter OTP'}
-              </CardTitle>
-              <CardDescription className="text-slate-500 text-sm">
-                {step === 'form'
-                  ? 'Sign up to post and manage your property listings'
-                  : `OTP sent to ${phone}`}
-              </CardDescription>
+              <CardTitle className="text-2xl font-bold text-slate-900">Create Account</CardTitle>
+              <CardDescription className="text-slate-500 text-sm">Sign up to post and manage your property listings</CardDescription>
             </CardHeader>
 
             <CardContent className="px-8 pb-8">
@@ -221,145 +160,119 @@ export default function SignupPage() {
                 </Alert>
               )}
 
-              {step === 'form' ? (
-                <form onSubmit={handleSendOtp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-slate-700">Full Name</Label>
-                    <div className="relative group">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-600 transition-colors" />
-                      <Input
-                        type="text"
-                        placeholder="Enter your full name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="pl-10 h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all"
-                        required
-                        disabled={loading}
-                      />
+              <form onSubmit={handleSignup} className="space-y-4">
+                {/* Full Name */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">Full Name</Label>
+                  <div className="relative group">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-600 transition-colors" />
+                    <Input type="text" placeholder="Enter your full name" value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="pl-10 h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all"
+                      required disabled={loading} />
+                  </div>
+                </div>
+
+                {/* Phone */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">Phone Number</Label>
+                  <div className="relative group">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                      <Phone className="h-4 w-4 text-slate-400 group-focus-within:text-emerald-600 transition-colors" />
+                      <span className="text-sm text-slate-500 border-r border-slate-200 pr-2">+92</span>
                     </div>
+                    <Input type="tel" placeholder="03001234567" value={phone}
+                      onChange={(e) => setPhone(formatPhone(e.target.value))}
+                      className="pl-20 h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all"
+                      required disabled={loading} />
                   </div>
+                </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-slate-700">Phone Number</Label>
-                    <div className="relative group">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-                        <Phone className="h-4 w-4 text-slate-400 group-focus-within:text-emerald-600 transition-colors" />
-                        <span className="text-sm text-slate-500 border-r border-slate-200 pr-2">+92</span>
-                      </div>
-                      <Input
-                        type="tel"
-                        placeholder="03001234567"
-                        value={phone}
-                        onChange={(e) => setPhone(formatPhone(e.target.value))}
-                        className="pl-20 h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-slate-700">I am a</Label>
-                    <div className="flex gap-2">
-                      {[
-                        { value: 'individual', emoji: '👤', label: 'Individual' },
-                        { value: 'agent', emoji: '🏢', label: 'Agent' },
-                        { value: 'builder', emoji: '🏗️', label: 'Builder' },
-                      ].map((type) => (
-                        <button
-                          key={type.value}
-                          type="button"
-                          onClick={() => setUserType(type.value)}
-                          className={`flex-1 flex items-center justify-center gap-1.5 h-11 rounded-xl border-2 text-sm font-medium transition-all ${
-                            userType === type.value
-                              ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                              : 'border-slate-200 hover:border-emerald-300 text-slate-600'
-                          }`}
-                        >
-                          <span>{type.emoji}</span>
-                          <span>{type.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full h-11 gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all group"
-                    disabled={loading || !name || phone.length < 10}
-                  >
-                    {loading ? (
-                      <><Spinner className="h-4 w-4" />Sending OTP...</>
-                    ) : (
-                      <>Send OTP<ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" /></>
-                    )}
-                  </Button>
-
-                  <div className="text-center">
-                    <p className="text-sm text-slate-600">
-                      Already have an account?{' '}
-                      <Link href="/auth/login" className="text-emerald-600 hover:text-emerald-700 font-medium hover:underline">
-                        Sign In
-                      </Link>
-                    </p>
-                  </div>
-                </form>
-              ) : (
-                <form onSubmit={handleVerifyOtp} className="space-y-6">
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium text-slate-700">6-Digit OTP</Label>
-                    <div className="flex gap-2 justify-between" onPaste={handleOtpPaste}>
-                      {otp.map((digit, i) => (
-                        <input
-                          key={i}
-                          ref={el => { otpRefs.current[i] = el }}
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={1}
-                          value={digit}
-                          onChange={e => handleOtpChange(i, e.target.value)}
-                          onKeyDown={e => handleOtpKeyDown(i, e)}
-                          className="w-12 h-12 text-center text-lg font-bold border-2 rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all bg-white"
-                        />
-                      ))}
-                    </div>
-                    <p className="text-xs text-slate-500 text-center">OTP expires in 10 minutes</p>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full h-11 gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all"
-                    disabled={loading || otp.join('').length !== 6}
-                  >
-                    {loading ? (
-                      <><Spinner className="h-4 w-4" />Verifying...</>
-                    ) : (
-                      <><CheckCircle2 className="h-4 w-4" />Verify & Create Account</>
-                    )}
-                  </Button>
-
-                  <div className="flex items-center justify-between text-sm">
-                    <button
-                      type="button"
-                      onClick={() => { setStep('form'); setOtp(['', '', '', '', '', '']); setError('') }}
-                      className="text-slate-500 hover:text-slate-700 transition-colors"
-                    >
-                      ← Go Back
+                {/* Password */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">Password</Label>
+                  <div className="relative group">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-600 transition-colors" />
+                    <Input type={showPassword ? 'text' : 'password'} placeholder="Min 6 characters" value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10 pr-10 h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all"
+                      required disabled={loading} />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
-                    {resendTimer > 0 ? (
-                      <span className="text-slate-400">Resend in {resendTimer}s</span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleSendOtp as any}
-                        className="text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
-                      >
-                        Resend OTP
-                      </button>
-                    )}
                   </div>
-                </form>
-              )}
+                </div>
+
+                {/* Confirm Password */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">Confirm Password</Label>
+                  <div className="relative group">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-600 transition-colors" />
+                    <Input type={showConfirm ? 'text' : 'password'} placeholder="Re-enter password" value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className={`pl-10 pr-10 h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all ${
+                        confirmPassword && confirmPassword !== password ? 'border-red-400' : ''
+                      }`}
+                      required disabled={loading} />
+                    <button type="button" onClick={() => setShowConfirm(!showConfirm)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {confirmPassword && confirmPassword !== password && (
+                    <p className="text-xs text-red-500">Passwords do not match</p>
+                  )}
+                </div>
+
+                {/* User Type */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">I am a</Label>
+                  <div className="flex gap-2">
+                    {USER_TYPES.map((type) => (
+                      <button key={type.value} type="button" onClick={() => setUserType(type.value)}
+                        className={`flex-1 flex items-center justify-center gap-1.5 h-11 rounded-xl border-2 text-sm font-medium transition-all ${
+                          userType === type.value
+                            ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                            : 'border-slate-200 hover:border-emerald-300 text-slate-600'
+                        }`}>
+                        <span>{type.emoji}</span>
+                        <span>{type.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Agency / Company Name */}
+                {(userType === 'agent' || userType === 'developer') && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-slate-700">
+                      {userType === 'agent' ? 'Agency Name' : 'Company Name'}
+                    </Label>
+                    <div className="relative group">
+                      <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-600 transition-colors" />
+                      <Input type="text"
+                        placeholder={userType === 'agent' ? 'e.g. Ali Properties' : 'e.g. Skyline Developers'}
+                        value={agencyName} onChange={(e) => setAgencyName(e.target.value)}
+                        className="pl-10 h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all"
+                        required disabled={loading} />
+                    </div>
+                  </div>
+                )}
+
+                <Button type="submit"
+                  className="w-full h-11 gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all group"
+                  disabled={loading || !name || phone.length < 10 || password.length < 6 || password !== confirmPassword}>
+                  {loading ? <><Spinner className="h-4 w-4" />Creating Account...</> : <>Create Account<ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" /></>}
+                </Button>
+
+                <div className="text-center">
+                  <p className="text-sm text-slate-600">
+                    Already have an account?{' '}
+                    <Link href="/auth/login" className="text-emerald-600 hover:text-emerald-700 font-medium hover:underline">Sign In</Link>
+                  </p>
+                </div>
+              </form>
             </CardContent>
           </Card>
 
