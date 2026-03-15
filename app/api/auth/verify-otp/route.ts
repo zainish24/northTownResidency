@@ -7,6 +7,14 @@ const twilioClient = twilio(
   process.env.TWILIO_AUTH_TOKEN!
 )
 
+function getCredentials(phone: string) {
+  const digits = phone.replace(/\D/g, '')
+  return {
+    email: `u${digits}@ke.internal`,
+    password: `KE#${digits}#2024!`,
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const { phone, otp, name, userType } = await request.json()
@@ -14,7 +22,7 @@ export async function POST(request: Request) {
 
     const formatted = phone.startsWith('+') ? phone : `+92${phone.replace(/^0/, '')}`
 
-    // Step 1: Verify OTP with Twilio
+    // Verify OTP with Twilio
     try {
       const result = await twilioClient.verify.v2
         .services(process.env.TWILIO_VERIFY_SERVICE_SID!)
@@ -27,25 +35,26 @@ export async function POST(request: Request) {
       throw e
     }
 
-    // Step 2: Sign in or sign up via Supabase phone auth
     const supabase = await createClient()
+    const { email, password } = getCredentials(formatted)
 
-    // Send OTP via Supabase to get session
-    await supabase.auth.signInWithOtp({ phone: formatted })
+    // Try sign in first
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
 
-    // Verify with Supabase to get session
-    const { data, error } = await supabase.auth.verifyOtp({
-      phone: formatted,
-      token: otp,
-      type: 'sms',
-    })
+    if (!signInError && signInData.session) {
+      if (name) {
+        await supabase.from('profiles').update({ full_name: name, updated_at: new Date().toISOString() }).eq('id', signInData.user.id)
+      }
+      return NextResponse.json({ success: true, session: signInData.session })
+    }
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    // New user — sign up
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password })
+    if (signUpError) return NextResponse.json({ error: signUpError.message }, { status: 500 })
 
-    // Save/update profile
-    if (data.user) {
+    if (signUpData.user) {
       await supabase.from('profiles').upsert({
-        id: data.user.id,
+        id: signUpData.user.id,
         phone: formatted,
         full_name: name || null,
         role: userType || 'individual',
@@ -54,7 +63,8 @@ export async function POST(request: Request) {
       }, { onConflict: 'id' })
     }
 
-    return NextResponse.json({ success: true, session: data.session })
+    const { data: finalSignIn } = await supabase.auth.signInWithPassword({ email, password })
+    return NextResponse.json({ success: true, session: finalSignIn.session })
 
   } catch (error: any) {
     console.error('Verify OTP error:', error)

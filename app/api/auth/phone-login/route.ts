@@ -7,6 +7,14 @@ const twilioClient = twilio(
   process.env.TWILIO_AUTH_TOKEN!
 )
 
+function getCredentials(phone: string) {
+  const digits = phone.replace(/\D/g, '')
+  return {
+    email: `u${digits}@ke.internal`,
+    password: `KE#${digits}#2024!`,
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const { phone, otp } = await request.json()
@@ -26,13 +34,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No account found. Please sign up first.' }, { status: 404 })
     }
 
-    // If OTP provided — verify it
+    // If OTP provided — verify and login
     if (otp) {
       try {
         const result = await twilioClient.verify.v2
           .services(process.env.TWILIO_VERIFY_SERVICE_SID!)
           .verificationChecks.create({ to: formatted, code: otp })
-
         if (result.status !== 'approved') {
           return NextResponse.json({ error: 'Invalid OTP. Please try again.' }, { status: 400 })
         }
@@ -41,31 +48,17 @@ export async function POST(request: Request) {
         throw e
       }
 
-      // OTP verified — sign in via Supabase phone auth
-      const { data, error } = await supabase.auth.signInWithOtp({
-        phone: formatted,
-      })
-
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-      // Verify OTP with Supabase to get session
-      const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
-        phone: formatted,
-        token: otp,
-        type: 'sms',
-      })
-
-      if (verifyError) return NextResponse.json({ error: verifyError.message }, { status: 400 })
-
-      return NextResponse.json({ success: true, session: verifyData.session })
+      const { email, password } = getCredentials(formatted)
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) return NextResponse.json({ error: 'Login failed. Please try again.' }, { status: 400 })
+      return NextResponse.json({ success: true, session: data.session })
     }
 
-    // No OTP — send OTP via Twilio
+    // Send OTP via Twilio
     try {
       const verification = await twilioClient.verify.v2
         .services(process.env.TWILIO_VERIFY_SERVICE_SID!)
         .verifications.create({ to: formatted, channel: 'sms' })
-
       if (verification.status !== 'pending') {
         return NextResponse.json({ error: 'Failed to send OTP' }, { status: 500 })
       }
