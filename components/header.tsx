@@ -289,7 +289,7 @@ export function Header() {
                 <DropdownMenuTrigger asChild suppressHydrationWarning>
                   <button className="flex items-center gap-1 pl-2 pr-1 py-1 hover:bg-slate-100 rounded-lg transition-all">
                     <div className="w-7 h-7 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center text-white font-semibold text-xs">
-                      {profile?.full_name?.charAt(0) || user.email?.charAt(0).toUpperCase() || 'U'}
+                      {profile?.full_name?.charAt(0)?.toUpperCase() || 'U'}
                     </div>
                     <ChevronDown className="h-3 w-3 text-slate-500" />
                   </button>
@@ -297,7 +297,7 @@ export function Header() {
                 <DropdownMenuContent align="end" className="w-48">
                   <div className="px-2 py-2 mb-1">
                     <p className="text-sm font-semibold text-slate-900 truncate">{profile?.full_name || 'User'}</p>
-                    <p className="text-xs text-slate-500 truncate">{user.email}</p>
+                    <p className="text-xs text-slate-500 truncate">{profile?.phone || ''}</p>
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>

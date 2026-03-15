@@ -20,8 +20,8 @@ export default function LoginPage() {
   const [resendTimer, setResendTimer] = useState(0)
   const otpRefs = useRef<(HTMLInputElement | null)[]>([])
   const [settings, setSettings] = useState({
-    platform_name: 'NTR Properties',
-    tagline: 'North Town Residency',
+    platform_name: 'Karachi Estates',
+    tagline: 'Karachi Real Estate',
     logo_url: '',
     primary_color: '#10b981',
     secondary_color: '#3b82f6',
@@ -52,11 +52,11 @@ export default function LoginPage() {
     }
     setLoading(true)
     try {
-      // Check account exists first
-      const checkRes = await fetch('/api/auth/check-phone', {
+      // Check if account exists
+      const checkRes = await fetch('/api/auth/phone-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ phone, checkOnly: true }),
       })
       const checkData = await checkRes.json()
       if (!checkRes.ok) throw new Error(checkData.error)
@@ -89,27 +89,19 @@ export default function LoginPage() {
   }
 
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      otpRefs.current[index - 1]?.focus()
-    }
+    if (e.key === 'Backspace' && !otp[index] && index > 0) otpRefs.current[index - 1]?.focus()
   }
 
   const handleOtpPaste = (e: React.ClipboardEvent) => {
     const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
-    if (pasted.length === 6) {
-      setOtp(pasted.split(''))
-      otpRefs.current[5]?.focus()
-    }
+    if (pasted.length === 6) { setOtp(pasted.split('')); otpRefs.current[5]?.focus() }
   }
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     const code = otp.join('')
-    if (code.length !== 6) {
-      setError('Please enter the complete 6-digit OTP')
-      return
-    }
+    if (code.length !== 6) { setError('Please enter the complete 6-digit OTP'); return }
     setLoading(true)
     try {
       const res = await fetch('/api/auth/verify-otp', {
@@ -122,9 +114,12 @@ export default function LoginPage() {
 
       if (data.session) {
         const supabase = createClient()
-        await supabase.auth.setSession(data.session)
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        })
+        await new Promise(resolve => setTimeout(resolve, 300))
       }
-
       window.location.href = '/dashboard'
     } catch (err: any) {
       setError(err.message || 'Invalid OTP. Please try again.')
@@ -144,19 +139,14 @@ export default function LoginPage() {
         </div>
       )}
       <div className="flex flex-col">
-        <span className={`font-bold text-base leading-tight ${white ? 'text-white' : 'text-slate-900'}`}>
-          {settings.platform_name}
-        </span>
-        <span className={`text-[10px] ${white ? 'text-white/70' : 'text-slate-500'}`}>
-          {settings.tagline}
-        </span>
+        <span className={`font-bold text-base leading-tight ${white ? 'text-white' : 'text-slate-900'}`}>{settings.platform_name}</span>
+        <span className={`text-[10px] ${white ? 'text-white/70' : 'text-slate-500'}`}>{settings.tagline}</span>
       </div>
     </div>
   )
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Side */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         <div className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: "url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=2075')" }}>
@@ -165,8 +155,8 @@ export default function LoginPage() {
         <div className="relative z-10 flex flex-col justify-between p-12 text-white">
           <Link href="/"><LogoSection white /></Link>
           <div className="space-y-6">
-            <h1 className="text-4xl font-bold leading-tight">Find Your Dream Property in North Town Residency</h1>
-            <p className="text-lg text-white/90">Browse verified property listings. Buy, sell, or rent with confidence.</p>
+            <h1 className="text-4xl font-bold leading-tight">Find Your Dream Property in Karachi</h1>
+            <p className="text-lg text-white/90">Browse thousands of verified property listings. Buy, sell, or rent with confidence.</p>
             <div className="flex gap-8 pt-4">
               <div><div className="text-3xl font-bold">500+</div><div className="text-sm text-white/70">Active Listings</div></div>
               <div><div className="text-3xl font-bold">1000+</div><div className="text-sm text-white/70">Happy Customers</div></div>
@@ -176,7 +166,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right Side */}
       <div className="flex-1 flex items-center justify-center p-8 bg-slate-50">
         <div className="w-full max-w-md">
           <Link href="/" className="flex lg:hidden items-center gap-2 mb-8 justify-center">
@@ -194,9 +183,7 @@ export default function LoginPage() {
                 {step === 'phone' ? 'Sign In' : 'Enter OTP'}
               </CardTitle>
               <CardDescription className="text-slate-500 text-sm">
-                {step === 'phone'
-                  ? 'Enter your registered phone number'
-                  : `OTP sent to ${phone}`}
+                {step === 'phone' ? 'Enter your registered phone number' : `OTP sent to +92${phone.replace(/^0/, '')}`}
               </CardDescription>
             </CardHeader>
 
@@ -227,6 +214,7 @@ export default function LoginPage() {
                         disabled={loading}
                       />
                     </div>
+                    <p className="text-xs text-slate-500">Enter your registered Pakistani mobile number</p>
                   </div>
 
                   <Button
@@ -234,19 +222,13 @@ export default function LoginPage() {
                     className="w-full h-11 gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all group"
                     disabled={loading || phone.length < 10}
                   >
-                    {loading ? (
-                      <><Spinner className="h-4 w-4" />Sending OTP...</>
-                    ) : (
-                      <>Send OTP<ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" /></>
-                    )}
+                    {loading ? <><Spinner className="h-4 w-4" />Sending OTP...</> : <>Send OTP<ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" /></>}
                   </Button>
 
                   <div className="text-center">
                     <p className="text-sm text-slate-600">
                       Don't have an account?{' '}
-                      <Link href="/auth/signup" className="text-emerald-600 hover:text-emerald-700 font-medium hover:underline">
-                        Sign Up
-                      </Link>
+                      <Link href="/auth/signup" className="text-emerald-600 hover:text-emerald-700 font-medium hover:underline">Sign Up</Link>
                     </p>
                   </div>
                 </form>
@@ -277,29 +259,19 @@ export default function LoginPage() {
                     className="w-full h-11 gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all"
                     disabled={loading || otp.join('').length !== 6}
                   >
-                    {loading ? (
-                      <><Spinner className="h-4 w-4" />Verifying...</>
-                    ) : (
-                      <><CheckCircle2 className="h-4 w-4" />Verify & Sign In</>
-                    )}
+                    {loading ? <><Spinner className="h-4 w-4" />Verifying...</> : <><CheckCircle2 className="h-4 w-4" />Verify & Sign In</>}
                   </Button>
 
                   <div className="flex items-center justify-between text-sm">
-                    <button
-                      type="button"
-                      onClick={() => { setStep('phone'); setOtp(['', '', '', '', '', '']); setError('') }}
-                      className="text-slate-500 hover:text-slate-700 transition-colors"
-                    >
-                      ← Go Back
+                    <button type="button" onClick={() => { setStep('phone'); setOtp(['', '', '', '', '', '']); setError('') }}
+                      className="text-slate-500 hover:text-slate-700 transition-colors">
+                      ← Change Number
                     </button>
                     {resendTimer > 0 ? (
                       <span className="text-slate-400">Resend in {resendTimer}s</span>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={handleSendOtp as any}
-                        className="text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
-                      >
+                      <button type="button" onClick={handleSendOtp as any}
+                        className="text-emerald-600 hover:text-emerald-700 font-medium transition-colors">
                         Resend OTP
                       </button>
                     )}

@@ -13,10 +13,12 @@ import {
   Sparkles, CheckCircle, CheckCircle2, ArrowLeft
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 export default function SignupPage() {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [userType, setUserType] = useState('individual')
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [step, setStep] = useState<'form' | 'otp'>('form')
   const [error, setError] = useState('')
@@ -108,7 +110,7 @@ export default function SignupPage() {
       const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp: code, name }),
+        body: JSON.stringify({ phone, otp: code, name, userType }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -116,9 +118,12 @@ export default function SignupPage() {
       // Set session client side
       if (data.session) {
         const supabase = createClient()
-        await supabase.auth.setSession(data.session)
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        })
+        await new Promise(resolve => setTimeout(resolve, 300))
       }
-
       window.location.href = '/dashboard'
     } catch (err: any) {
       setError(err.message || 'Invalid OTP. Please try again.')
@@ -242,7 +247,31 @@ export default function SignupPage() {
                         disabled={loading}
                       />
                     </div>
-                    <p className="text-xs text-slate-500">Enter your Pakistani mobile number (03XXXXXXXXX)</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-slate-700">I am a</Label>
+                    <div className="flex gap-2">
+                      {[
+                        { value: 'individual', emoji: '👤', label: 'Individual' },
+                        { value: 'agent', emoji: '🏢', label: 'Agent' },
+                        { value: 'builder', emoji: '🏗️', label: 'Builder' },
+                      ].map((type) => (
+                        <button
+                          key={type.value}
+                          type="button"
+                          onClick={() => setUserType(type.value)}
+                          className={`flex-1 flex items-center justify-center gap-1.5 h-11 rounded-xl border-2 text-sm font-medium transition-all ${
+                            userType === type.value
+                              ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                              : 'border-slate-200 hover:border-emerald-300 text-slate-600'
+                          }`}
+                        >
+                          <span>{type.emoji}</span>
+                          <span>{type.label}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <Button
