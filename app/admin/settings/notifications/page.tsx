@@ -111,7 +111,6 @@ export default function NotificationsPage() {
 
     // If join fails, fetch without join
     if (error) {
-      console.log('Fetching without join...')
       const result = await supabase
         .from('notifications')
         .select('*')
@@ -147,29 +146,15 @@ export default function NotificationsPage() {
         .order('full_name', { ascending: true })
       
       if (dbError) {
-        console.error('Database error:', dbError)
         setUsers([])
       } else {
         if (data && data.length > 0) {
-          console.log('Sample user phone:', data[0]?.phone)
-          // Process phone numbers - handle both +92 and 03 formats
           const processedUsers = data.map(u => {
             let displayPhone = u.phone || ''
-            // If starts with +92, replace with 0
-            if (displayPhone.startsWith('+92')) {
-              displayPhone = '0' + displayPhone.substring(3)
-            }
-            // If starts with 92 (without +), replace with 0
-            else if (displayPhone.startsWith('92') && displayPhone.length > 10) {
-              displayPhone = '0' + displayPhone.substring(2)
-            }
-            return {
-              ...u,
-              displayPhone: displayPhone,
-              originalPhone: u.phone
-            }
+            if (displayPhone.startsWith('+92')) displayPhone = '0' + displayPhone.substring(3)
+            else if (displayPhone.startsWith('92') && displayPhone.length > 10) displayPhone = '0' + displayPhone.substring(2)
+            return { ...u, displayPhone, originalPhone: u.phone }
           })
-          console.log('Processed phone:', processedUsers[0]?.displayPhone)
           setUsers(processedUsers)
         } else {
           setUsers([])
@@ -253,34 +238,7 @@ export default function NotificationsPage() {
       return
     }
 
-    // Get target users
-    let query = supabase.from('profiles').select('id')
-    
-    if (form.target_audience === 'specific') {
-      if (!form.specific_user_id) {
-        toast.error('Please select a specific user')
-        setSending(false)
-        return
-      }
-      query = query.eq('id', form.specific_user_id)
-    } else if (form.target_audience === 'admins') {
-      query = query.eq('role', 'admin')
-    }
-    // 'all' means no filter
-
-    const { data: users } = await query
-
-    // Create user notifications
-    if (users && users.length > 0) {
-      const userNotifications = users.map(u => ({
-        user_id: u.id,
-        notification_id: notification.id,
-        created_at: new Date().toISOString()
-      }))
-      await supabase.from('user_notifications').insert(userNotifications)
-    }
-
-    toast.success(`Notification sent to ${users?.length || 0} users`)
+    toast.success(`Notification sent successfully`)
     setDialog(false)
     setForm({ 
       title: '', 
@@ -1150,44 +1108,6 @@ export default function NotificationsPage() {
                       onChange={(e) => {
                         const value = e.target.value
                         setUserSearch(value)
-                        console.log('=== SEARCH DEBUG ===')
-                        console.log('Search value:', value)
-                        console.log('Total users:', users.length)
-                        
-                        if (users.length > 0) {
-                          console.log('\nFirst 3 users data:')
-                          users.slice(0, 3).forEach((u, i) => {
-                            console.log(`User ${i + 1}:`, {
-                              name: u.full_name,
-                              phone: u.phone,
-                              displayPhone: u.displayPhone
-                            })
-                          })
-                        }
-                        
-                        const filtered = users.filter(u => {
-                          if (!value || value.trim() === '') return true
-                          const searchTerm = value.toLowerCase().trim()
-                          const userName = (u.full_name || '').toLowerCase()
-                          const userPhone = (u.displayPhone || u.phone || '').toLowerCase()
-                          
-                          const nameMatch = userName.includes(searchTerm)
-                          const phoneMatch = userPhone.includes(searchTerm)
-                          
-                          if (nameMatch || phoneMatch) {
-                            console.log('\nMatch found:', {
-                              name: u.full_name,
-                              phone: userPhone,
-                              searchTerm,
-                              nameMatch,
-                              phoneMatch
-                            })
-                          }
-                          
-                          return nameMatch || phoneMatch
-                        })
-                        console.log('\nFiltered users:', filtered.length)
-                        console.log('===================')
                       }}
                       className="pl-10"
                     />

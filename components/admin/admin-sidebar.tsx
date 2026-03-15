@@ -64,9 +64,10 @@ export function AdminSidebar() {
         { icon: Settings, label: 'Site Settings', href: '/admin/settings/site' },
         { icon: Building2, label: 'Property Types', href: '/admin/settings/property-types' },
         { icon: Sparkles, label: 'Amenities', href: '/admin/settings/amenities' },
-        { icon: Bell, label: 'Notifications', href: '/admin/settings/notifications' },
+        { icon: MapPin, label: 'Areas', href: '/admin/settings/areas' },
+        { icon: Grid3x3, label: 'Projects', href: '/admin/settings/projects' },
+        { icon: Building2, label: 'Developers', href: '/admin/settings/developers' },
         { icon: BarChart3, label: 'Reports', href: '/admin/settings/reports' },
-        { icon: MapPin, label: 'Phases & Blocks', href: '/admin/settings/phases' },
       ]
     },
   ]

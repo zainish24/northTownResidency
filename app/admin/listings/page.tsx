@@ -55,19 +55,17 @@ export default function AdminListingsPage() {
     // Fetch all listings for stats (only active ones)
     const { data: allData } = await supabase
       .from('listings')
-      .select('*, phase:phases(name), block:blocks(name), profile:profiles(full_name, phone), listing_images(image_url)')
-      .eq('is_active', true)
+      .select('*, area:areas(name), project:projects(name), property_type:property_types(name,slug), profile:profiles(full_name, phone), listing_images(image_url)')
       .order('created_at', { ascending: false })
     
     if (allData) {
-      setAllListings(allData as Listing[])
+      setAllListings(allData as any[])
     }
 
-    // Fetch filtered listings (only active ones)
+    // Fetch filtered listings
     let query = supabase
       .from('listings')
-      .select('*, phase:phases(name), block:blocks(name), profile:profiles(full_name, phone), listing_images(image_url)')
-      .eq('is_active', true)
+      .select('*, area:areas(name), project:projects(name), property_type:property_types(name,slug), profile:profiles(full_name, phone), listing_images(image_url)')
       .order('created_at', { ascending: false })
 
     if (statusFilter) {
@@ -93,12 +91,12 @@ export default function AdminListingsPage() {
     const supabase = createClient()
     const { data, error } = await supabase
       .from('listings')
-      .select('*, phase:phases(name), block:blocks(name), profile:profiles(full_name, phone), listing_images(*)')
+      .select('*, area:areas(name), project:projects(name), property_type:property_types(name,slug), profile:profiles(full_name, phone), listing_images(*)')
       .eq('id', listingId)
       .single()
 
     if (!error && data) {
-      setSelectedListing(data as Listing)
+      setSelectedListing(data as any)
     }
   }
 
@@ -222,11 +220,11 @@ export default function AdminListingsPage() {
 
 
   const handleExport = (format: 'csv' | 'pdf' | 'excel') => {
-    const data = filteredListings.map(l => ({
+    const data = filteredListings.map((l: any) => ({
       Title: l.title,
-      Phase: l.phase?.name || '',
-      Block: l.block?.name || '',
-      Type: l.property_type,
+      Area: l.area?.name || '',
+      Project: l.project?.name || '',
+      Type: l.property_type?.name || '',
       Price: l.price,
       Status: l.status,
       Views: l.views_count || 0,
@@ -309,10 +307,10 @@ export default function AdminListingsPage() {
 
 
 
-  const filteredListings = listings.filter(listing =>
+  const filteredListings = (listings as any[]).filter((listing: any) =>
     listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    listing.phase?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    listing.block?.name.toLowerCase().includes(searchQuery.toLowerCase())
+    listing.area?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    listing.project?.name?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const STATUS_COLORS = {
@@ -621,15 +619,11 @@ export default function AdminListingsPage() {
                     <div className="space-y-2 mb-3">
                       <div className="flex items-center gap-2 text-sm text-slate-600">
                         <MapPin className="h-4 w-4 text-emerald-600 shrink-0" />
-                        <span className="truncate">{listing.phase?.name} • {listing.block?.name}</span>
+                        <span className="truncate">{(listing as any).area?.name}{(listing as any).project?.name ? ` • ${(listing as any).project.name}` : ''}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-slate-600">
-                        {listing.property_type === 'residential_plot' ? (
-                          <Home className="h-4 w-4 text-emerald-600 shrink-0" />
-                        ) : (
-                          <Store className="h-4 w-4 text-emerald-600 shrink-0" />
-                        )}
-                        <span className="capitalize">{listing.property_type.replace('_', ' ')}</span>
+                        <Home className="h-4 w-4 text-emerald-600 shrink-0" />
+                        <span className="capitalize">{(listing as any).property_type?.name || ''}</span>
                       </div>
                     </div>
 
@@ -753,7 +747,7 @@ export default function AdminListingsPage() {
                       <div className="flex items-center gap-4 text-xs text-slate-500">
                         <span className="flex items-center gap-1">
                           <MapPin className="h-3 w-3" />
-                          {listing.phase?.name} • {listing.block?.name}
+                          {(listing as any).area?.name}
                         </span>
                         <span className="flex items-center gap-1">
                           <Eye className="h-3 w-3" />
@@ -821,7 +815,7 @@ export default function AdminListingsPage() {
                 <div className="flex items-center gap-4 text-sm text-white/80">
                   <span className="flex items-center gap-1">
                     <MapPin className="h-4 w-4" />
-                    {selectedListing.phase?.name} • {selectedListing.block?.name}
+                    {(selectedListing as any).area?.name}
                   </span>
                   <span className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
@@ -847,13 +841,13 @@ export default function AdminListingsPage() {
                   <div className="bg-slate-50 rounded-lg p-3 text-center">
                     <Home className="h-5 w-5 text-emerald-600 mx-auto mb-1" />
                     <p className="text-xs text-slate-500">Type</p>
-                    <p className="text-sm font-semibold capitalize">{selectedListing.property_type.replace('_', ' ')}</p>
+                    <p className="text-sm font-semibold capitalize">{(selectedListing as any).property_type?.name || ''}</p>
                   </div>
                   <div className="bg-slate-50 rounded-lg p-3 text-center">
                     <Maximize className="h-5 w-5 text-emerald-600 mx-auto mb-1" />
                     <p className="text-xs text-slate-500">Size</p>
                     <p className="text-sm font-semibold">
-                      {selectedListing.plot_size_sqyd || selectedListing.shop_size_sqft} {selectedListing.plot_size_sqyd ? 'Sq. Yds' : 'Sq. Ft'}
+                      {(selectedListing as any).area_size} {(selectedListing as any).area_unit || ''}
                     </p>
                   </div>
                   <div className="bg-slate-50 rounded-lg p-3 text-center">

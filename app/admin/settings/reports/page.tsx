@@ -75,27 +75,27 @@ export default function ReportsPage() {
     setLoading(true)
     const supabase = createClient()
     
-    const [listings, users, phases, inquiries] = await Promise.all([
-      supabase.from('listings').select('*, phases(name), profiles(full_name)').order('created_at', { ascending: false }),
+    const [listings, users] = await Promise.all([
+      supabase.from('listings').select('*, area:areas(name), profiles(full_name)').order('created_at', { ascending: false }),
       supabase.from('profiles').select('id, created_at'),
-      supabase.from('phases').select('name, id'),
-      supabase.from('inquiries').select('*')
     ])
 
     const totalViews = listings.data?.reduce((sum, l) => sum + (l.views_count || 0), 0) || 0
     const avgPrice = listings.data?.reduce((sum, l) => sum + (l.price || 0), 0) || 0
     const avgPriceValue = listings.data?.length ? Math.round(avgPrice / listings.data.length) : 0
 
-    // Listings by Phase
-    const byPhase = phases.data?.map(phase => ({
-      name: phase.name,
-      value: listings.data?.filter(l => l.phases?.name === phase.name).length || 0
-    })) || []
+    // Listings by Area
+    const areaMap: Record<string, number> = {}
+    listings.data?.forEach(l => {
+      const name = l.area?.name || 'Unknown'
+      areaMap[name] = (areaMap[name] || 0) + 1
+    })
+    const byPhase = Object.entries(areaMap).map(([name, value]) => ({ name, value }))
 
-    // Listings by Type
+    // Listings by Purpose
     const byType = [
-      { name: 'Residential Plot', value: listings.data?.filter(l => l.property_type === 'residential_plot').length || 0 },
-      { name: 'Commercial Shop', value: listings.data?.filter(l => l.property_type === 'commercial_shop').length || 0 }
+      { name: 'For Sale', value: listings.data?.filter(l => l.purpose === 'sale').length || 0 },
+      { name: 'For Rent', value: listings.data?.filter(l => l.purpose === 'rent').length || 0 }
     ]
 
     // User Growth (last 6 months)
@@ -116,7 +116,7 @@ export default function ReportsPage() {
       totalListings: listings.data?.length || 0,
       totalUsers: users.data?.length || 0,
       totalViews,
-      totalInquiries: inquiries.data?.length || 0,
+      totalInquiries: 0,
       avgPrice: avgPriceValue,
       conversionRate: 2.4,
       listingsByPhase: byPhase,
@@ -208,7 +208,7 @@ export default function ReportsPage() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `ntr-report-${new Date().toISOString().split('T')[0]}.csv`
+      a.download = `karachi-estates-report-${new Date().toISOString().split('T')[0]}.csv`
       a.click()
       URL.revokeObjectURL(url)
     } 
@@ -221,12 +221,12 @@ export default function ReportsPage() {
       const ws = XLSX.utils.json_to_sheet(data)
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, 'Report')
-      XLSX.writeFile(wb, `ntr-report-${new Date().toISOString().split('T')[0]}.xlsx`)
+      XLSX.writeFile(wb, `karachi-estates-report-${new Date().toISOString().split('T')[0]}.xlsx`)
     }
     else if (format === 'pdf') {
       const doc = new jsPDF()
       doc.setFontSize(16)
-      doc.text('NTR Analytics Report', 14, 15)
+      doc.text('Karachi Estates Analytics Report', 14, 15)
       doc.setFontSize(10)
       doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 22)
       
@@ -240,7 +240,7 @@ export default function ReportsPage() {
         startY: 28,
       })
       
-      doc.save(`ntr-report-${new Date().toISOString().split('T')[0]}.pdf`)
+      doc.save(`karachi-estates-report-${new Date().toISOString().split('T')[0]}.pdf`)
     }
     
     toast.success('Report exported successfully')
@@ -606,7 +606,7 @@ export default function ReportsPage() {
                           <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
                             <span className="flex items-center gap-1">
                               <MapPin className="h-3 w-3" />
-                              {listing.phases?.name}
+                              {listing.area?.name || 'Karachi'}
                             </span>
                             <span className="flex items-center gap-1">
                               <Eye className="h-3 w-3" />
@@ -618,7 +618,7 @@ export default function ReportsPage() {
                       <div className="text-right">
                         <p className="font-bold text-emerald-600">{formatPrice(listing.price)}</p>
                         <Badge className="mt-1 text-xs">
-                          {listing.property_type === 'residential_plot' ? 'Plot' : 'Shop'}
+                          {listing.purpose === 'sale' ? 'For Sale' : 'For Rent'}
                         </Badge>
                       </div>
                     </div>

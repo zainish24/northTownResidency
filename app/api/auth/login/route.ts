@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     }
 
     const formatted = phone.startsWith('+') ? phone : `+92${phone.replace(/^0/, '')}`
-    const fakeEmail = `${formatted.replace('+', '')}@ntr.app`
+    const fakeEmail = `${formatted.replace('+', '')}@karachi.estates`
 
     const supabase = await createClient()
 

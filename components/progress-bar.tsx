@@ -10,8 +10,8 @@ function ProgressBarContent() {
   const [visible, setVisible] = useState(false)
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const timerRef = useRef<NodeJS.Timeout>()
-  const progressRef = useRef<NodeJS.Timeout>()
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const progressRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
 
   useEffect(() => {
     // Start loading when route changes

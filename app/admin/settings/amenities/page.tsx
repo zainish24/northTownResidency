@@ -253,11 +253,11 @@ export default function AmenitiesPage() {
     return icon?.icon || Sparkles
   }
 
-  const groupedAmenities = filteredAmenities.reduce((acc, amenity) => {
+  const groupedAmenities = filteredAmenities.reduce<Record<string, any[]>>((acc, amenity) => {
     if (!acc[amenity.category]) acc[amenity.category] = []
     acc[amenity.category].push(amenity)
     return acc
-  }, {} as Record<string, any[]>)
+  }, {})
 
   const stats = [
     { 

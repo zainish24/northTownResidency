@@ -38,9 +38,9 @@ export default async function AdminDashboard() {
     supabase.from('listings').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
     supabase.from('listings').select('*', { count: 'exact', head: true }).eq('status', 'rejected'),
     supabase.from('profiles').select('*', { count: 'exact', head: true }),
-    supabase.from('listings').select('*, phase:phases(name), block:blocks(name), profile:profiles(full_name, phone)').order('created_at', { ascending: false }).limit(5),
+    supabase.from('listings').select('*, area:areas(name), project:projects(name), profile:profiles(full_name, phone)').order('created_at', { ascending: false }).limit(5),
     supabase.storage.from('property-images').list(),
-    supabase.from('listings').select('*, phase:phases(name)').order('created_at', { ascending: false }),
+    supabase.from('listings').select('*, area:areas(name), property_type:property_types(name)').order('created_at', { ascending: false }),
     supabase.from('listings').select('views_count')
   ])
 
@@ -55,7 +55,7 @@ export default async function AdminDashboard() {
 
   // Prepare chart data
   const monthlyData = prepareMonthlyData(allListings || [])
-  const phaseData = preparePhaseData(allListings || [])
+  const areaData = preparePhaseData(allListings || [])
   const typeData = prepareTypeData(allListings || [])
   const statusData = prepareStatusData(totalListings || 0, pendingListings || 0, approvedListings || 0, rejectedListings || 0)
 
@@ -72,7 +72,7 @@ export default async function AdminDashboard() {
       recentListings={recentListings || []}
       chartData={{
         monthly: monthlyData,
-        byPhase: phaseData,
+        byPhase: areaData,
         byType: typeData,
         byStatus: statusData,
         revenue: prepareRevenueData(),
@@ -130,25 +130,20 @@ function prepareMonthlyData(listings: any[]) {
 }
 
 function preparePhaseData(listings: any[]) {
-  const phases: any = {}
+  const areas: any = {}
   listings.forEach(l => {
-    const phaseName = l.phase?.name || 'Unknown'
-    phases[phaseName] = (phases[phaseName] || 0) + 1
+    const areaName = l.area?.name || 'Unknown'
+    areas[areaName] = (areas[areaName] || 0) + 1
   })
-  
-  return Object.entries(phases).map(([phase, count]) => ({
-    phase,
-    count
-  }))
+  return Object.entries(areas).map(([phase, count]) => ({ phase, count }))
 }
 
 function prepareTypeData(listings: any[]) {
-  const residential = listings.filter(l => l.property_type === 'residential_plot').length
-  const commercial = listings.filter(l => l.property_type === 'commercial_shop').length
-  
+  const sale = listings.filter(l => l.purpose === 'sale').length
+  const rent = listings.filter(l => l.purpose === 'rent').length
   return [
-    { name: 'Residential', value: residential },
-    { name: 'Commercial', value: commercial }
+    { name: 'Sale', value: sale },
+    { name: 'Rent', value: rent }
   ]
 }
 

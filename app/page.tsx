@@ -4,305 +4,142 @@ import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
 import { EnhancedPropertyCard } from '@/components/enhanced-property-card'
 import { Button } from '@/components/ui/button'
-import { ContactAgentDialog } from '@/components/contact-agent-dialog'
-import { 
-  ArrowRight, Home, Store, Shield, Users, MapPin, TrendingUp, 
-  Search, SlidersHorizontal, ChevronRight, Star, Award, Clock,
-  Building2, Trees, Sparkles, Heart, Grid3x3, LayoutGrid,
-  CircleDollarSign, Ruler, Calendar, CheckCircle2, BadgeCheck,
-  ArrowUpRight, Filter, Percent, ArrowDownUp, Eye, Bookmark,
-  Compass, Gem, Trophy, Zap, Sun, Moon, Wind, Droplets,
-  BarChart3, PieChart, Target, Rocket, Globe, Lock, Key,
-  Camera, Video, MessageCircle, Share2, Download, Upload,
-  Briefcase, GraduationCap, Hospital, Utensils, Car, Bike,
-  Phone, Mail, MessageSquare, Facebook, Instagram, Twitter
+import { HomeSearchBar } from '@/components/home-search-bar'
+import {
+  ArrowRight, Home, Shield, Users, MapPin, Search,
+  ChevronRight, Star, Clock, Building2, BadgeCheck,
+  TrendingUp, Layers, CheckCircle2, Phone, Award
 } from 'lucide-react'
 import { getIconComponent } from '@/lib/icon'
-import { HomePageFilters } from '@/components/home-page-filters'
 
 export default async function HomePage() {
   const supabase = await createClient()
-  
-  // Fetch all listings for Recently Added (including pending)
-  const { data: allListings } = await supabase
-    .from('listings')
-    .select(`id, title, price, listing_type, property_type, plot_size_sqyd, shop_size_sqft, block_id, phase_id, created_at, block:blocks(name), phase:phases(name), images:listing_images(image_url, is_primary)`)
-    .order('created_at', { ascending: false })
-    .limit(12)
 
-  // Fetch featured listings
-  const { data: featuredListings } = await supabase
-    .from('listings')
-    .select(`id, title, price, listing_type, property_type, plot_size_sqyd, shop_size_sqft, block_id, phase_id, created_at, block:blocks(name), phase:phases(name), images:listing_images(image_url, is_primary)`)
-    .eq('status', 'approved')
-    .eq('is_featured', true)
-    .order('created_at', { ascending: false })
-    .limit(6)
+  const [
+    { data: featuredListings },
+    { data: recentListings },
+    { count: totalListings },
+    { count: totalUsers },
+    { data: propertyTypes },
+    { data: areas },
+    { data: featuredProjects },
+    { data: featuredDevelopers },
+  ] = await Promise.all([
+    supabase
+      .from('listings')
+      .select('*, area:areas(id,name,slug), project:projects(id,name,slug), property_type:property_types(id,name,slug,icon), listing_images(id,image_url,is_primary,display_order)')
+      .eq('status', 'approved').eq('is_featured', true)
+      .order('created_at', { ascending: false }).limit(6),
+    supabase
+      .from('listings')
+      .select('*, area:areas(id,name,slug), project:projects(id,name,slug), property_type:property_types(id,name,slug,icon), listing_images(id,image_url,is_primary,display_order)')
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false }).limit(8),
+    supabase.from('listings').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }),
+    supabase.from('property_types').select('id,name,slug,icon,category').eq('is_active', true).order('display_order').limit(8),
+    supabase.from('areas').select('id,name,slug,image_url,is_popular').eq('is_active', true).eq('is_popular', true).order('display_order').limit(8),
+    supabase.from('projects').select('*, area:areas(id,name,slug), developer:developers(id,name,slug,logo_url)').eq('is_active', true).eq('is_featured', true).order('created_at', { ascending: false }).limit(6),
+    supabase.from('developers').select('id,name,slug,logo_url,is_verified,is_featured').eq('is_active', true).eq('is_featured', true).order('created_at', { ascending: false }).limit(6),
+  ])
 
-  // Get total listings count (all, not just approved)
-  const { count: totalListings } = await supabase
-    .from('listings')
-    .select('*', { count: 'exact', head: true })
-
-  // Get all property types with their listings count
-  const { data: propertyTypes } = await supabase
-    .from('property_types')
-    .select('id, name, slug, icon, category')
-    .eq('is_active', true)
-    .order('display_order')
-
-  // Get property type counts
-  const propertyTypesWithCounts = await Promise.all(
-    (propertyTypes || []).map(async (type) => {
-      const { count } = await supabase
-        .from('listings')
-        .select('*', { count: 'exact', head: true })
-        .eq('property_type', type.slug)
-
-      return {
-        ...type,
-        count: count || 0
-      }
-    })
-  )
-
-  // Get all phases with their listings count and details
-  const { data: phases, error: phasesError } = await supabase
-    .from('phases')
-    .select('id, name, description, image_url')
-    .eq('is_active', true)
-    .order('name')
-
-  // Get blocks count and listings count per phase
-  const phasesWithData = await Promise.all(
-    (phases || []).map(async (phase) => {
-      const { count: listingsCount } = await supabase
-        .from('listings')
-        .select('*', { count: 'exact', head: true })
-        .eq('phase_id', phase.id)
-
-      const { count: blocksCount } = await supabase
-        .from('blocks')
-        .select('*', { count: 'exact', head: true })
-        .eq('phase_id', phase.id)
-        .eq('is_active', true)
-
-      return {
-        ...phase,
-        listingsCount: listingsCount || 0,
-        blocksCount: blocksCount || 0
-      }
-    })
-  )
+  const areaImages = [
+    'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=400&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1582407947304-fd86f028f716?w=400&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1448630360428-65456885c650?w=400&h=300&fit=crop',
+  ]
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-slate-50 via-white to-white">
+    <div className="flex min-h-screen flex-col bg-white">
       <Header />
-      
+
       <main className="flex-1">
-        {/* HERO SECTION - Cinematic Experience */}
-        <section className="relative min-h-[90vh] flex items-center overflow-hidden">
-          {/* Parallax Background */}
+
+        {/* ─── 1. HERO ─── */}
+        <section className="relative min-h-[92vh] flex items-center overflow-hidden">
           <div className="absolute inset-0">
-            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1920')] bg-cover bg-center bg-fixed" />
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-900/70 via-slate-900/50 to-transparent" />
-            {/* Animated Overlay */}
-            <div className="absolute inset-0 opacity-30">
-              <div className="absolute top-0 -left-4 w-72 h-72 bg-emerald-500 rounded-full mix-blend-multiply filter blur-xl animate-blob" />
-              <div className="absolute top-0 -right-4 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-2000" />
-              <div className="absolute -bottom-8 left-20 w-72 h-72 bg-amber-500 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000" />
-            </div>
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: "url('https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1920')" }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/60 to-slate-900/80" />
           </div>
 
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full z-10">
-            <div className="grid lg:grid-cols-2 gap-16 items-center">
-              {/* Left Content - Animated */}
-              <div className="space-y-8 animate-fade-in-up">
-                <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.1]">
-                  Find Your Dream
-                  <span className="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-400">
-                    Property in Karachi
-                  </span>
-                </h1>
-
-                <p className="text-xl text-white/80 max-w-lg leading-relaxed">
-                  Discover premium residential plots, commercial properties, and villas in Karachi - 
-                  Pakistan's premier real estate marketplace.
-                </p>
-
-                {/* Search Bar - Premium Glass Effect */}
-                <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-2 border border-white/20 shadow-2xl max-w-2xl group hover:bg-white/15 transition-all">
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="flex-1 relative">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/60" />
-                      <input
-                        type="text"
-                        placeholder="Search by location, phase, or property type..."
-                        className="w-full pl-12 pr-4 py-4 bg-white/10 rounded-xl border-0 focus:ring-2 focus:ring-emerald-500/50 text-white placeholder-white/50"
-                      />
-                    </div>
-                    <Button size="lg" className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-8 rounded-xl shadow-lg hover:shadow-xl transition-all">
-                      Search
-                      <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Stats with Premium Cards */}
-                <div className="grid grid-cols-4 gap-4 mt-10">
-                  {[
-                    { value: `${totalListings || 0}+`, label: 'Active Listings', icon: Home, change: '+12%' },
-                    { value: '2000+', label: 'Happy Owners', icon: Users, change: '+25%' },
-                    { value: '4', label: 'Phases', icon: Building2, change: 'All' },
-                    { value: '24/7', label: 'Support', icon: Clock, change: 'Live' }
-                  ].map((stat, i) => (
-                    <div 
-                      key={i} 
-                      className="group bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 hover:bg-white/20 hover:scale-105 transition-all duration-300 cursor-pointer"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <stat.icon className="w-5 h-5 text-emerald-400 group-hover:rotate-12 transition-transform" />
-                        <span className="text-xs text-emerald-400 font-semibold">{stat.change}</span>
-                      </div>
-                      <p className="text-xl font-bold text-white">{stat.value}</p>
-                      <p className="text-xs text-white/60">{stat.label}</p>
-                    </div>
-                  ))}
-                </div>
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 w-full z-10">
+            <div className="max-w-4xl mx-auto text-center space-y-8">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-emerald-300 text-sm font-medium backdrop-blur-sm">
+                <TrendingUp className="h-4 w-4" />
+                Karachi's #1 Real Estate Platform
               </div>
 
-              {/* Right Content - 3D Gallery Grid */}
-              <div className="relative hidden lg:block perspective-1000">
-                <div className="grid grid-cols-2 gap-4 transform rotate-y-[-5deg]">
-                  {/* Left Column */}
-                  <div className="space-y-4">
-                    <div className="group relative overflow-hidden rounded-2xl shadow-2xl transform hover:scale-105 transition-all duration-500">
-                      <img 
-                        src="/luxury villas.webp" 
-                        alt="Luxury Villas" 
-                        className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
-                      <div className="absolute bottom-4 left-4 text-white">
-                        <p className="text-sm font-medium opacity-90">Luxury Villas</p>
-                      </div>
-                      <div className="absolute top-4 right-4 bg-emerald-500 rounded-full px-3 py-1 text-xs font-semibold text-white shadow-lg animate-pulse">
-                        Hot Deal
-                      </div>
-                      {/* Overlay Icons */}
-                      <div className="absolute top-4 left-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="p-2 bg-white/20 backdrop-blur-sm rounded-full hover:bg-white/40 transition-colors">
-                          <Heart className="w-4 h-4 text-white" />
-                        </button>
-                        <button className="p-2 bg-white/20 backdrop-blur-sm rounded-full hover:bg-white/40 transition-colors">
-                          <Camera className="w-4 h-4 text-white" />
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      {[
-                        { img: '/modern villas .webp', label: 'Modern Villas' },
-                        { img: '/shop.jfif', label: 'Commercial Shops' }
-                      ].map((item, idx) => (
-                        <div key={idx} className="group relative overflow-hidden rounded-2xl shadow-lg transform hover:scale-105 transition-all duration-500">
-                          <img src={item.img} alt={item.label} className="w-full h-32 object-cover group-hover:scale-110 transition-transform duration-700" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent" />
-                          <div className="absolute bottom-2 left-2 text-white">
-                            <p className="text-xs font-medium">{item.label}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.1]">
+                Find Your Perfect
+                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-400">
+                  Property in Karachi
+                </span>
+              </h1>
+
+              <p className="text-lg md:text-xl text-white/75 max-w-2xl mx-auto">
+                Browse thousands of verified listings — houses, apartments, plots, and commercial properties across all major areas.
+              </p>
+
+              {/* Search Tabs + Bar */}
+              <HomeSearchBar />
+
+              {/* Stats */}
+              <div className="flex flex-wrap justify-center gap-8 pt-4">
+                {[
+                  { value: `${totalListings || 0}+`, label: 'Active Listings' },
+                  { value: `${areas?.length || 15}+`, label: 'Areas Covered' },
+                  { value: `${featuredProjects?.length || 0}+`, label: 'New Projects' },
+                  { value: `${totalUsers || 0}+`, label: 'Happy Users' },
+                ].map((s, i) => (
+                  <div key={i} className="text-center">
+                    <p className="text-2xl md:text-3xl font-bold text-white">{s.value}</p>
+                    <p className="text-sm text-white/60">{s.label}</p>
                   </div>
-
-                  {/* Right Column */}
-                  <div className="space-y-4 mt-8">
-                    {[
-                      { img: '/corner plot.webp', label: 'Corner Plots', featured: true },
-                      { img: '/parkfacing.jfif', label: 'Park Facing', featured: false }
-                    ].map((item, idx) => (
-                      <div key={idx} className="group relative overflow-hidden rounded-2xl shadow-xl transform hover:scale-105 transition-all duration-500">
-                        <img src={item.img} alt={item.label} className={`w-full ${idx === 0 ? 'h-40' : 'h-48'} object-cover group-hover:scale-110 transition-transform duration-700`} />
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
-                        <div className="absolute bottom-4 left-4 text-white">
-                          <p className="text-sm font-medium opacity-90">{item.label}</p>
-                        </div>
-                        {item.featured && (
-                          <div className="absolute top-4 right-4 bg-amber-500 rounded-full px-3 py-1 text-xs font-semibold text-white shadow-lg">
-                            Premium
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-
+                ))}
               </div>
             </div>
           </div>
 
-          {/* Scroll Indicator */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 hidden md:block animate-bounce">
-            <div className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center backdrop-blur-sm">
-              <div className="w-1 h-2 bg-gradient-to-b from-emerald-400 to-blue-400 rounded-full mt-2 animate-pulse" />
+          {/* Scroll indicator */}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+            <div className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center">
+              <div className="w-1 h-2 bg-white/60 rounded-full mt-2" />
             </div>
           </div>
         </section>
 
-        {/* ADVANCED FILTER BAR */}
-        <section className="sticky top-16 z-40 py-4 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-lg">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <HomePageFilters />
-          </div>
-        </section>
-
-        {/* FEATURED CATEGORIES - REDUCED GAP */}
-        <section className="py-12">
+        {/* ─── 2. PROPERTY CATEGORIES ─── */}
+        <section className="py-16 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-10">
-              <span className="text-emerald-600 font-semibold text-sm uppercase tracking-wider bg-emerald-50 px-4 py-2 rounded-full inline-block mb-3">
-                Explore Categories
-              </span>
-              <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-3">
-                Browse Properties by <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600">Type</span>
+              <span className="text-emerald-600 font-semibold text-sm uppercase tracking-wider bg-emerald-50 px-4 py-1.5 rounded-full inline-block mb-3">Browse by Type</span>
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
+                Property <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600">Categories</span>
               </h2>
-              <p className="text-slate-600 max-w-2xl mx-auto text-lg">
-                Find your perfect property from our wide range of categories
-              </p>
             </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {propertyTypesWithCounts.slice(0, 6).map((type, i) => {
-                const iconName = type.icon || 'home'
-                const IconComponent = getIconComponent(iconName)
-                const colors = ['emerald', 'blue', 'amber', 'green', 'purple', 'pink']
-                const color = colors[i % colors.length]
-                const gradients = [
-                  'from-emerald-500 to-emerald-600',
-                  'from-blue-500 to-blue-600',
-                  'from-amber-500 to-amber-600',
-                  'from-green-500 to-green-600',
-                  'from-purple-500 to-purple-600',
-                  'from-pink-500 to-pink-600'
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+              {(propertyTypes || []).map((type, i) => {
+                const IconComponent = getIconComponent(type.icon || 'home')
+                const colors = [
+                  'hover:bg-emerald-600', 'hover:bg-blue-600', 'hover:bg-amber-600',
+                  'hover:bg-purple-600', 'hover:bg-rose-600', 'hover:bg-teal-600',
+                  'hover:bg-orange-600', 'hover:bg-indigo-600'
                 ]
-                const gradient = gradients[i % gradients.length]
-                
                 return (
-                  <Link 
-                    key={type.id} 
-                    href={`/listings?property_type=${type.slug}`}
-                    className="group relative bg-white rounded-xl p-5 hover:shadow-xl transition-all duration-300 border border-slate-200/80 hover:border-transparent hover:-translate-y-1"
-                  >
-                    <div className={`absolute inset-0 bg-gradient-to-br ${gradient} rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
-                    <div className="relative z-10">
-                      <div className={`w-12 h-12 bg-${color}-50 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 mx-auto`}>
-                        <IconComponent className={`w-6 h-6 text-${color}-600 group-hover:text-white transition-colors duration-300`} />
-                      </div>
-                      <h3 className="text-base font-bold text-slate-900 mb-1 group-hover:text-white transition-colors text-center">{type.name}</h3>
-                      <p className="text-xs text-slate-600 group-hover:text-white/90 transition-colors text-center">{type.count} Listings</p>
+                  <Link key={type.id} href={`/listings?property_type_id=${type.id}`}
+                    className={`group flex flex-col items-center gap-2 p-4 bg-slate-50 rounded-xl border border-slate-200 hover:border-transparent hover:text-white hover:shadow-lg transition-all duration-300 hover:-translate-y-1 ${colors[i % colors.length]}`}>
+                    <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center group-hover:bg-white/20">
+                      <IconComponent className="w-5 h-5 text-slate-600 group-hover:text-white transition-colors" />
                     </div>
+                    <span className="text-xs font-semibold text-slate-700 group-hover:text-white text-center transition-colors">{type.name}</span>
                   </Link>
                 )
               })}
@@ -310,218 +147,207 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* PHASE SHOWCASE - REDUCED GAP */}
-        <section className="py-12 bg-slate-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-end mb-8">
-              <div>
-                <span className="text-emerald-600 font-semibold text-sm uppercase tracking-wider bg-emerald-50 px-4 py-2 rounded-full inline-block mb-2">
-                  Prime Locations
-                </span>
-                <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
-                  Explore <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600">Phases</span>
-                </h2>
-              </div>
-              <Button variant="ghost" className="text-slate-600 hover:text-emerald-600 group">
-                View All 
-                <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-              {phasesWithData && phasesWithData.length > 0 ? phasesWithData.map((phase, idx) => {
-                const defaultImages = [
-                  'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&h=300&fit=crop',
-                  'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=300&fit=crop',
-                  'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop',
-                  'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&h=300&fit=crop'
-                ]
-                const imageUrl = phase.image_url || defaultImages[idx % 4]
-                
-                return (
-                  <Link 
-                    key={phase.id}
-                    href={`/listings?phase_id=${phase.id}`}
-                    className="group relative overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-                  >
-                    <div className="aspect-[16/9] relative overflow-hidden">
-                      <img 
-                        src={imageUrl}
-                        alt={phase.name} 
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/40 to-transparent" />
-                      
-                      <div className="absolute top-3 left-3">
-                        <span className="px-3 py-1 bg-white/90 backdrop-blur-sm text-slate-900 rounded-full text-xs font-semibold shadow-lg">
-                          {phase.name}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="p-4 bg-white">
-                      {phase.description && (
-                        <p className="text-xs text-slate-600 mb-2 line-clamp-2">{phase.description}</p>
-                      )}
-                      
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <p className="text-xs text-slate-500">Properties</p>
-                          <p className="text-lg font-bold text-slate-900">{phase.listingsCount}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-slate-500">Blocks</p>
-                          <p className="text-base font-semibold text-slate-900">{phase.blocksCount}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-emerald-600 group-hover:text-emerald-700">
-                          Explore
-                        </span>
-                        <ArrowRight className="w-3 h-3 text-emerald-600 group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </div>
-                  </Link>
-                )
-              }) : (
-                <div className="col-span-full text-center py-12 bg-white rounded-xl">
-                  <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                  <p className="text-slate-500">No phases available</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* FEATURED PROPERTIES - REDUCED GAP */}
+        {/* ─── 3. FEATURED PROPERTIES ─── */}
         {featuredListings && featuredListings.length > 0 && (
-          <section className="py-12">
+          <section className="py-16 bg-slate-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between items-end mb-8">
+              <div className="flex justify-between items-end mb-10">
                 <div>
-                  <span className="text-emerald-600 font-semibold text-sm uppercase tracking-wider bg-emerald-50 px-4 py-2 rounded-full inline-block mb-2">
-                    Editor's Choice
-                  </span>
+                  <span className="text-emerald-600 font-semibold text-sm uppercase tracking-wider bg-emerald-50 px-4 py-1.5 rounded-full inline-block mb-3">Premium Listings</span>
                   <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
                     Featured <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600">Properties</span>
                   </h2>
+                  <p className="text-slate-500 mt-1 text-sm">Hand-picked premium properties across Karachi</p>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="icon" className="rounded-full border-slate-200 w-10 h-10">
-                    <ChevronRight className="h-4 w-4 rotate-180" />
-                  </Button>
-                  <Button variant="outline" size="icon" className="rounded-full border-slate-200 w-10 h-10">
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Link href="/listings?featured=true" className="hidden sm:flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+                  View All <ArrowRight className="w-4 h-4" />
+                </Link>
               </div>
-
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {featuredListings.map((listing, index) => (
-                  <div key={listing.id} className="animate-fade-in-up" style={{ animationDelay: `${index * 100}ms` }}>
-                    <EnhancedPropertyCard listing={listing} />
-                  </div>
+                {featuredListings.map((listing: any) => (
+                  <EnhancedPropertyCard key={listing.id} listing={listing} />
                 ))}
               </div>
-
-              <div className="text-center mt-10">
-                <Button className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white rounded-xl px-8 py-5 text-base shadow-lg hover:shadow-xl transition-all group">
-                  View All Properties
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Button>
+              <div className="text-center mt-8 sm:hidden">
+                <Link href="/listings?featured=true">
+                  <Button variant="outline" className="rounded-xl">View All Featured <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                </Link>
               </div>
             </div>
           </section>
         )}
 
-        {/* WHY CHOOSE US - REDUCED GAP */}
-        <section className="py-12 bg-slate-50">
+        {/* ─── 4. POPULAR AREAS ─── */}
+        <section className="py-16 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-10">
-              <span className="text-emerald-600 font-semibold text-sm uppercase tracking-wider bg-emerald-50 px-4 py-2 rounded-full inline-block mb-2">
-                Why Choose Us
-              </span>
-              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">
-                The <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600">Karachi Estates Advantage</span>
-              </h2>
-              <p className="text-slate-600 max-w-2xl mx-auto text-base">
-                Experience the best property deals with complete transparency
-              </p>
+            <div className="flex justify-between items-end mb-10">
+              <div>
+                <span className="text-emerald-600 font-semibold text-sm uppercase tracking-wider bg-emerald-50 px-4 py-1.5 rounded-full inline-block mb-3">Prime Locations</span>
+                <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
+                  Popular <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600">Areas</span>
+                </h2>
+                <p className="text-slate-500 mt-1 text-sm">Explore properties in Karachi's top neighborhoods</p>
+              </div>
+              <Link href="/listings" className="hidden sm:flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+                All Areas <ChevronRight className="w-4 h-4" />
+              </Link>
             </div>
-
-            <div className="grid md:grid-cols-3 gap-5">
-              {[
-                { 
-                  icon: Shield, 
-                  title: 'Verified Properties', 
-                  desc: 'All listings verified with physical inspection',
-                  stats: '100% Verified',
-                  color: 'emerald'
-                },
-                { 
-                  icon: Award, 
-                  title: 'Best Price Guarantee', 
-                  desc: 'Market analysis and price negotiation support',
-                  stats: 'Save up to 15%',
-                  color: 'blue'
-                },
-                { 
-                  icon: Users, 
-                  title: 'Expert Support', 
-                  desc: '24/7 support from property experts',
-                  stats: '2000+ Happy Clients',
-                  color: 'amber'
-                }
-              ].map((item, i) => (
-                <div 
-                  key={i} 
-                  className="group relative bg-white rounded-xl p-6 hover:shadow-lg transition-all duration-300 border border-slate-200/80 hover:-translate-y-1"
-                >
-                  <div className={`w-14 h-14 bg-${item.color}-100 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                    <item.icon className={`w-7 h-7 text-${item.color}-600`} />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {(areas || []).map((area, idx) => (
+                <Link key={area.id} href={`/areas/${area.slug}`}
+                  className="group relative overflow-hidden rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                  <div className="aspect-[4/3] relative overflow-hidden">
+                    <img
+                      src={area.image_url || areaImages[idx % areaImages.length]}
+                      alt={area.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-3">
+                      <p className="font-bold text-white text-sm">{area.name}</p>
+                      <p className="text-white/70 text-xs flex items-center gap-1 mt-0.5">
+                        <MapPin className="w-3 h-3" /> Karachi
+                      </p>
+                    </div>
+                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-white/20 backdrop-blur-sm rounded-full p-1.5">
+                      <ArrowRight className="w-3 h-3 text-white" />
+                    </div>
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-2">{item.title}</h3>
-                  <p className="text-sm text-slate-600 mb-3">{item.desc}</p>
-                  <div className="flex items-center gap-1 text-sm font-medium">
-                    <BadgeCheck className={`w-4 h-4 text-${item.color}-600`} />
-                    <span className={`text-${item.color}-600`}>{item.stats}</span>
-                  </div>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
         </section>
 
-        {/* RECENTLY ADDED - REDUCED GAP */}
-        <section className="py-12">
+        {/* ─── 5. NEW PROJECTS ─── */}
+        {featuredProjects && featuredProjects.length > 0 && (
+          <section className="py-16 bg-slate-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between items-end mb-10">
+                <div>
+                  <span className="text-blue-600 font-semibold text-sm uppercase tracking-wider bg-blue-50 px-4 py-1.5 rounded-full inline-block mb-3">New Developments</span>
+                  <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
+                    Featured <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-600">Projects</span>
+                  </h2>
+                  <p className="text-slate-500 mt-1 text-sm">Latest residential and commercial developments</p>
+                </div>
+                <Link href="/projects" className="hidden sm:flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium">
+                  All Projects <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {featuredProjects.map((project: any) => (
+                  <Link key={project.id} href={`/projects/${project.slug}`}
+                    className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-slate-100 hover:-translate-y-1">
+                    <div className="aspect-video relative overflow-hidden">
+                      <img
+                        src={project.image_url || 'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=600&h=338&fit=crop'}
+                        alt={project.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent" />
+                      <div className="absolute top-3 left-3">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold text-white shadow ${
+                          project.project_status === 'completed' ? 'bg-emerald-600' :
+                          project.project_status === 'upcoming' ? 'bg-amber-500' : 'bg-blue-600'
+                        }`}>
+                          {project.project_status === 'ongoing' ? 'Under Construction' :
+                           project.project_status === 'completed' ? 'Ready to Move' : 'Upcoming'}
+                        </span>
+                      </div>
+                      {project.developer?.logo_url && (
+                        <div className="absolute bottom-3 right-3 bg-white rounded-lg p-1.5 shadow">
+                          <img src={project.developer.logo_url} alt={project.developer.name} className="h-6 w-auto object-contain" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-bold text-slate-900 mb-1 group-hover:text-emerald-600 transition-colors">{project.name}</h3>
+                      <div className="flex items-center gap-1 text-xs text-slate-500 mb-2">
+                        <MapPin className="w-3 h-3 text-emerald-500" />
+                        <span>{project.area?.name || 'Karachi'}</span>
+                        {project.developer && <><span className="text-slate-300">·</span><span>{project.developer.name}</span></>}
+                      </div>
+                      {(project.min_price || project.max_price) && (
+                        <p className="text-sm font-bold text-emerald-600">
+                          PKR {project.min_price ? `${(project.min_price / 1000000).toFixed(1)}M` : ''}
+                          {project.min_price && project.max_price ? ' – ' : ''}
+                          {project.max_price ? `${(project.max_price / 1000000).toFixed(1)}M` : ''}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ─── 6. FEATURED DEVELOPERS ─── */}
+        {featuredDevelopers && featuredDevelopers.length > 0 && (
+          <section className="py-16 bg-white">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between items-end mb-10">
+                <div>
+                  <span className="text-purple-600 font-semibold text-sm uppercase tracking-wider bg-purple-50 px-4 py-1.5 rounded-full inline-block mb-3">Top Builders</span>
+                  <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
+                    Featured <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">Developers</span>
+                  </h2>
+                  <p className="text-slate-500 mt-1 text-sm">Trusted and verified real estate developers</p>
+                </div>
+                <Link href="/developers" className="hidden sm:flex items-center gap-1 text-sm text-purple-600 hover:text-purple-700 font-medium">
+                  All Developers <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                {featuredDevelopers.map((dev: any) => (
+                  <Link key={dev.id} href={`/developers/${dev.slug}`}
+                    className="group flex flex-col items-center gap-3 p-5 bg-slate-50 rounded-2xl border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+                    <div className="w-16 h-16 bg-white rounded-xl shadow-sm flex items-center justify-center overflow-hidden border border-slate-100">
+                      {dev.logo_url ? (
+                        <img src={dev.logo_url} alt={dev.name} className="w-full h-full object-contain p-1" />
+                      ) : (
+                        <Building2 className="w-8 h-8 text-slate-400" />
+                      )}
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs font-bold text-slate-800 group-hover:text-emerald-700 transition-colors line-clamp-2">{dev.name}</p>
+                      {dev.is_verified && (
+                        <div className="flex items-center justify-center gap-1 mt-1">
+                          <BadgeCheck className="w-3 h-3 text-blue-500" />
+                          <span className="text-[10px] text-blue-500">Verified</span>
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ─── 7. RECENTLY ADDED ─── */}
+        <section className="py-16 bg-slate-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-end mb-8">
+            <div className="flex justify-between items-end mb-10">
               <div>
-                <span className="text-emerald-600 font-semibold text-sm uppercase tracking-wider bg-emerald-50 px-4 py-2 rounded-full inline-block mb-2">
-                  Fresh Listings
-                </span>
+                <span className="text-emerald-600 font-semibold text-sm uppercase tracking-wider bg-emerald-50 px-4 py-1.5 rounded-full inline-block mb-3">Fresh Listings</span>
                 <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
                   Recently <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600">Added</span>
                 </h2>
+                <p className="text-slate-500 mt-1 text-sm">Latest properties added by owners and agents</p>
               </div>
-              <Link href="/listings" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1">
-                View All
-                <ArrowRight className="h-4 w-4" />
+              <Link href="/listings" className="hidden sm:flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+                View All <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
-
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
-              {allListings?.slice(0, 8).map((listing, index) => (
-                <div key={listing.id} className="relative group">
+              {(recentListings || []).map((listing: any) => (
+                <div key={listing.id} className="relative">
                   <EnhancedPropertyCard listing={listing} />
-                  
-                  {/* New Badge */}
                   {new Date(listing.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) && (
                     <div className="absolute top-3 left-3 z-10">
-                      <span className="px-2 py-1 bg-gradient-to-r from-emerald-500 to-blue-500 text-white rounded-lg text-[10px] font-bold shadow-lg">
-                        NEW
-                      </span>
+                      <span className="px-2 py-0.5 bg-gradient-to-r from-emerald-500 to-blue-500 text-white rounded-md text-[10px] font-bold shadow">NEW</span>
                     </div>
                   )}
                 </div>
@@ -530,48 +356,69 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* CTA SECTION - COMPACT */}
-        <section className="relative py-20 overflow-hidden">
-          <div className="absolute inset-0">
-            <img
-              src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1920&h=600&fit=crop"
-              alt="NTR"
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/70 to-slate-900/90" />
+        {/* ─── 8. WHY CHOOSE US ─── */}
+        <section className="py-16 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <span className="text-emerald-600 font-semibold text-sm uppercase tracking-wider bg-emerald-50 px-4 py-1.5 rounded-full inline-block mb-3">Why Us</span>
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
+                The <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600">Karachi Estates</span> Advantage
+              </h2>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                { icon: Shield, title: 'Verified Listings', desc: 'Every property is verified before going live', color: 'emerald', stat: '100% Verified' },
+                { icon: Search, title: 'Easy Search', desc: 'Advanced filters to find exactly what you need', color: 'blue', stat: 'Smart Filters' },
+                { icon: Users, title: 'Direct Contact', desc: 'Connect directly with owners and agents', color: 'purple', stat: 'No Middleman' },
+                { icon: Award, title: 'Best Prices', desc: 'Market-competitive prices with negotiation support', color: 'amber', stat: 'Save up to 15%' },
+              ].map((item, i) => (
+                <div key={i} className="group text-center p-6 bg-slate-50 rounded-2xl border border-slate-200 hover:border-emerald-300 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+                  <div className={`w-14 h-14 bg-${item.color}-100 rounded-2xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform`}>
+                    <item.icon className={`w-7 h-7 text-${item.color}-600`} />
+                  </div>
+                  <h3 className="font-bold text-slate-900 mb-2">{item.title}</h3>
+                  <p className="text-sm text-slate-500 mb-3">{item.desc}</p>
+                  <span className={`text-xs font-semibold text-${item.color}-600 bg-${item.color}-50 px-3 py-1 rounded-full`}>{item.stat}</span>
+                </div>
+              ))}
+            </div>
           </div>
+        </section>
 
+        {/* ─── 9. CTA ─── */}
+        <section className="relative py-24 overflow-hidden">
+          <div className="absolute inset-0">
+            <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1920&h=600&fit=crop" alt="CTA" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/95 via-slate-900/90 to-blue-900/95" />
+          </div>
           <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-white">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Ready to Find Your Dream Property?
-            </h2>
-            <p className="text-base text-white/90 mb-6 max-w-2xl mx-auto">
-              Join thousands of satisfied customers who found their perfect property in Karachi.
+            <h2 className="text-3xl md:text-5xl font-bold mb-4">Ready to Find Your Dream Property?</h2>
+            <p className="text-lg text-white/80 mb-8 max-w-2xl mx-auto">
+              Join thousands of satisfied customers who found their perfect property in Karachi through our platform.
             </p>
-            
             <div className="flex flex-wrap gap-4 justify-center">
               <Link href="/listings">
-                <Button size="lg" className="bg-white text-slate-900 hover:bg-white/90 rounded-xl px-6 py-5 text-sm">
-                  Browse Properties
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                <Button size="lg" className="bg-white text-slate-900 hover:bg-white/90 rounded-xl px-8 font-semibold">
+                  Browse Properties <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <ContactAgentDialog />
+              <Link href="/dashboard/post">
+                <Button size="lg" variant="outline" className="border-white/50 text-white hover:bg-white/10 rounded-xl px-8 font-semibold">
+                  Post Your Property
+                </Button>
+              </Link>
             </div>
-
-            <div className="grid grid-cols-3 gap-6 max-w-2xl mx-auto mt-10 pt-8 border-t border-white/20">
-              <div>
-                <p className="text-2xl font-bold text-white">500+</p>
-                <p className="text-xs text-white/70">Properties Sold</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-white">2000+</p>
-                <p className="text-xs text-white/70">Happy Clients</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-white">24/7</p>
-                <p className="text-xs text-white/70">Support</p>
-              </div>
+            <div className="flex flex-wrap justify-center gap-8 mt-12 pt-8 border-t border-white/20">
+              {[
+                { icon: CheckCircle2, text: 'Free to List' },
+                { icon: Shield, text: 'Verified Buyers' },
+                { icon: Phone, text: '24/7 Support' },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-2 text-white/80">
+                  <item.icon className="w-5 h-5 text-emerald-400" />
+                  <span className="text-sm font-medium">{item.text}</span>
+                </div>
+              ))}
             </div>
           </div>
         </section>

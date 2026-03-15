@@ -8,16 +8,15 @@ export async function GET() {
   
   const { data, error } = await supabase
     .from('site_settings')
-    .select('setting_key, setting_value')
+    .select('key, value')
   
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
   
-  // Convert array to object
   const settings: Record<string, string> = {}
   data?.forEach(item => {
-    settings[item.setting_key] = item.setting_value || ''
+    settings[item.key] = item.value || ''
   })
   
   return NextResponse.json({ settings })

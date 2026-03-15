@@ -17,7 +17,7 @@ import type { Profile } from '@/lib/types'
 import { 
   Menu, X, User as UserIcon, LogOut, LayoutDashboard, Shield, 
   Home, Building2, PlusCircle, ChevronDown, Heart, Search,
-  Store, MapPin, Bell
+  Store, MapPin, Bell, Layers
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -41,6 +41,7 @@ export function Header() {
   })
   const [settingsLoaded, setSettingsLoaded] = useState(false)
   const [propertyTypes, setPropertyTypes] = useState<any[]>([])
+  const [areas, setAreas] = useState<any[]>([])
 
   useEffect(() => {
     const supabase = createClient()
@@ -57,15 +58,12 @@ export function Header() {
       .catch(() => setSettingsLoaded(true))
 
     // Fetch active property types
-    supabase
-      .from('property_types')
-      .select('id, name, slug, icon')
-      .eq('is_active', true)
-      .order('display_order')
-      .then(({ data }) => {
-        if (data) setPropertyTypes(data)
-      })
-      .catch(err => console.error('Failed to load property types:', err))
+    supabase.from('property_types').select('id, name, slug, icon').eq('is_active', true).order('display_order')
+      .then(({ data }) => { if (data) setPropertyTypes(data) })
+
+    // Fetch popular areas
+    supabase.from('areas').select('id, name, slug').eq('is_active', true).eq('is_popular', true).order('display_order').limit(6)
+      .then(({ data }) => { if (data) setAreas(data) })
     
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -105,32 +103,12 @@ export function Header() {
   }
 
   const loadNotifications = async (userId: string) => {
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('user_notifications')
-      .select('*, notification:notifications(*)')
-      .eq('user_id', userId)
-      .eq('is_read', false)
-      .order('created_at', { ascending: false })
-      .limit(5)
-    
-    if (data) {
-      setNotifications(data)
-      setUnreadCount(data.length)
-    }
+    // notifications table removed in migration — skip silently
+    setNotifications([])
+    setUnreadCount(0)
   }
 
-  const markAsRead = async (notificationId: string) => {
-    if (!user) return
-    const supabase = createClient()
-    await supabase
-      .from('user_notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
-      .eq('notification_id', notificationId)
-      .eq('user_id', user.id)
-    
-    loadNotifications(user.id)
-  }
+  const markAsRead = async (notificationId: string) => {}
 
   const handleNotificationClick = (item: any) => {
     setSelectedNotification(item.notification)
@@ -180,38 +158,109 @@ export function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1">
-            <Link href="/" className="px-3 py-2 text-sm font-medium text-slate-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all">
-              Home
-            </Link>
-            
+
+            {/* Buy */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild suppressHydrationWarning>
                 <button className="px-3 py-2 text-sm font-medium text-slate-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all inline-flex items-center gap-1">
-                  Properties
-                  <ChevronDown className="h-3 w-3" />
+                  Buy <ChevronDown className="h-3 w-3" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-52">
+                <DropdownMenuItem asChild>
+                  <Link href="/listings?purpose=sale" className="flex items-center gap-2 font-medium">
+                    <Home className="h-4 w-4 text-emerald-600" />All Properties for Sale
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {propertyTypes.map(type => (
+                  <DropdownMenuItem key={type.id} asChild>
+                    <Link href={`/listings?purpose=sale&property_type_id=${type.id}`} className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-slate-400" />{type.name}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Rent */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild suppressHydrationWarning>
+                <button className="px-3 py-2 text-sm font-medium text-slate-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all inline-flex items-center gap-1">
+                  Rent <ChevronDown className="h-3 w-3" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-52">
+                <DropdownMenuItem asChild>
+                  <Link href="/listings?purpose=rent" className="flex items-center gap-2 font-medium">
+                    <Store className="h-4 w-4 text-blue-600" />All Properties for Rent
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {propertyTypes.map(type => (
+                  <DropdownMenuItem key={type.id} asChild>
+                    <Link href={`/listings?purpose=rent&property_type_id=${type.id}`} className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-slate-400" />{type.name}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Projects */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild suppressHydrationWarning>
+                <button className="px-3 py-2 text-sm font-medium text-slate-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all inline-flex items-center gap-1">
+                  Projects <ChevronDown className="h-3 w-3" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-48">
                 <DropdownMenuItem asChild>
-                  <Link href="/listings" className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    All Properties
+                  <Link href="/projects" className="flex items-center gap-2 font-medium">
+                    <Layers className="h-4 w-4 text-blue-600" />All Projects
                   </Link>
                 </DropdownMenuItem>
-                {propertyTypes.map((type) => {
-                  const Icon = type.slug === 'residential_plot' ? Home : 
-                               type.slug === 'commercial_shop' ? Store : Building2
-                  return (
-                    <DropdownMenuItem key={type.id} asChild>
-                      <Link href={`/listings?property_type=${type.slug}`} className="flex items-center gap-2">
-                        <Icon className="h-4 w-4" />
-                        {type.name}
-                      </Link>
-                    </DropdownMenuItem>
-                  )
-                })}
+                <DropdownMenuItem asChild>
+                  <Link href="/projects?status=upcoming" className="flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-amber-500" />Upcoming
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/projects?status=ongoing" className="flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-blue-500" />Under Construction
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/projects?status=completed" className="flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-emerald-500" />Ready to Move
+                  </Link>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Areas */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild suppressHydrationWarning>
+                <button className="px-3 py-2 text-sm font-medium text-slate-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all inline-flex items-center gap-1">
+                  Areas <ChevronDown className="h-3 w-3" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-48">
+                {areas.map(area => (
+                  <DropdownMenuItem key={area.id} asChild>
+                    <Link href={`/areas/${area.slug}`} className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-emerald-500" />{area.name}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Developers — direct link, no dropdown needed */}
+            <Link href="/developers" className="px-3 py-2 text-sm font-medium text-slate-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all">
+              Developers
+            </Link>
+
           </nav>
 
           {/* Desktop Right Section */}
@@ -343,56 +392,57 @@ export function Header() {
           </button>
         </div>
 
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-slate-200">
-            <nav className="flex flex-col gap-1">
-              <Link href="/" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-emerald-50">
-                <Home className="h-4 w-4" />
-                Home
-              </Link>
-              <Link href="/listings" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-emerald-50">
-                <Building2 className="h-4 w-4" />
-                All Properties
-              </Link>
-              
-              {user && (
-                <>
-                  <div className="h-px bg-slate-200 my-1"></div>
-                  <Link href="/dashboard/post" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-emerald-600 text-white rounded-lg">
-                    <PlusCircle className="h-4 w-4" />
-                    Post Property
-                  </Link>
-                  <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-emerald-50">
-                    <LayoutDashboard className="h-4 w-4" />
-                    Dashboard
-                  </Link>
-                  <Link href="/dashboard/saved" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-emerald-50">
-                    <Heart className="h-4 w-4" />
-                    Saved
-                  </Link>
-                  {profile?.role === 'admin' && (
-                    <Link href="/admin" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-purple-50">
-                      <Shield className="h-4 w-4" />
-                      Admin
-                    </Link>
-                  )}
-                  <div className="h-px bg-slate-200 my-1"></div>
-                  <button onClick={() => { setMobileMenuOpen(false); handleSignOut(); }} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-red-50 text-red-600">
-                    <LogOut className="h-4 w-4" />
-                    Sign Out
-                  </button>
-                </>
-              )}
-              
-              {!user && !loading && (
-                <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-emerald-600 text-white rounded-lg">
-                  Sign In
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <div className="md:hidden py-4 border-t border-slate-200">
+              <nav className="flex flex-col gap-1">
+                <Link href="/listings?purpose=sale" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-emerald-50">
+                  <Home className="h-4 w-4 text-emerald-600" />Buy Property
                 </Link>
-              )}
-            </nav>
-          </div>
-        )}
+                <Link href="/listings?purpose=rent" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-emerald-50">
+                  <Store className="h-4 w-4 text-blue-600" />Rent Property
+                </Link>
+                <Link href="/projects" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-emerald-50">
+                  <Layers className="h-4 w-4 text-blue-500" />Projects
+                </Link>
+                <Link href="/developers" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-emerald-50">
+                  <Building2 className="h-4 w-4 text-purple-600" />Developers
+                </Link>
+                <Link href="/listings" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-emerald-50">
+                  <MapPin className="h-4 w-4 text-emerald-500" />All Areas
+                </Link>
+
+                <div className="h-px bg-slate-200 my-1" />
+
+                {user ? (
+                  <>
+                    <Link href="/dashboard/post" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-emerald-600 text-white rounded-lg">
+                      <PlusCircle className="h-4 w-4" />Post Property
+                    </Link>
+                    <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-emerald-50">
+                      <LayoutDashboard className="h-4 w-4" />Dashboard
+                    </Link>
+                    <Link href="/dashboard/saved" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-emerald-50">
+                      <Heart className="h-4 w-4" />Saved
+                    </Link>
+                    {profile?.role === 'admin' && (
+                      <Link href="/admin" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-purple-50 text-purple-700">
+                        <Shield className="h-4 w-4" />Admin Panel
+                      </Link>
+                    )}
+                    <div className="h-px bg-slate-200 my-1" />
+                    <button onClick={() => { setMobileMenuOpen(false); handleSignOut() }} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-red-50 text-red-600">
+                      <LogOut className="h-4 w-4" />Sign Out
+                    </button>
+                  </>
+                ) : !loading && (
+                  <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-emerald-600 text-white rounded-lg">
+                    Sign In
+                  </Link>
+                )}
+              </nav>
+            </div>
+          )}
       </div>
 
       {/* Notification Modal */}

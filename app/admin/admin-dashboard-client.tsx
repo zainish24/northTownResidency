@@ -77,24 +77,15 @@ export function AdminDashboardClient({ stats, recentListings, chartData }: Admin
   }, [])
 
   const loadNotificationCount = async () => {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { count } = await supabase
-      .from('user_notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .eq('is_read', false)
-    
-    setNotifications(count || 0)
+    // user_notifications table removed — skip
+    setNotifications(0)
   }
 
   const openListingModal = async (listingId: string) => {
     const supabase = createClient()
     const { data, error } = await supabase
       .from('listings')
-      .select('*, phase:phases(name), block:blocks(name), profile:profiles(full_name, phone), listing_images(*)')
+      .select('*, area:areas(name), project:projects(name), profile:profiles(full_name, phone), listing_images(*)')
       .eq('id', listingId)
       .single()
 
@@ -109,12 +100,12 @@ export function AdminDashboardClient({ stats, recentListings, chartData }: Admin
       
       const data = recentListings.map(l => ({
         Title: l.title,
-        Phase: l.phase?.name || 'N/A',
-        Block: l.block?.name || 'N/A',
-        'Property Type': l.property_type,
-        'Listing Type': l.listing_type,
+        Area: l.area?.name || 'N/A',
+        Project: l.project?.name || 'N/A',
+        'Property Type': l.property_type?.name || 'N/A',
+        Purpose: l.purpose || 'N/A',
         Price: l.price,
-        Size: l.plot_size_sqyd || l.shop_size_sqft || 'N/A',
+        Size: l.area_size ? `${l.area_size} ${l.area_unit}` : 'N/A',
         Status: l.status,
         Owner: l.profile?.full_name || 'N/A',
         Phone: l.profile?.phone || 'N/A',
@@ -342,8 +333,8 @@ export function AdminDashboardClient({ stats, recentListings, chartData }: Admin
                   <PieChartIcon className="h-4 w-4 text-blue-600" />
                 </div>
                 <div>
-                  <CardTitle className="text-sm">Phase Distribution</CardTitle>
-                  <p className="text-xs text-slate-500">By phase</p>
+                  <CardTitle className="text-sm">Area Distribution</CardTitle>
+                  <p className="text-xs text-slate-500">By area</p>
                 </div>
               </div>
             </CardHeader>
@@ -372,7 +363,7 @@ export function AdminDashboardClient({ stats, recentListings, chartData }: Admin
                   <div key={index} className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: Object.values(COLORS)[index % Object.values(COLORS).length] }} />
                     <span className="text-xs text-slate-600">{item.phase}</span>
-                    <span className="text-xs font-medium text-slate-900 ml-auto">{item.count}</span>
+                    <span className="text-xs font-medium text-slate-900 ml-auto">{String(item.count)}</span>
                   </div>
                 ))}
               </div>
@@ -397,20 +388,31 @@ export function AdminDashboardClient({ stats, recentListings, chartData }: Admin
             </CardHeader>
             <CardContent className="p-4">
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600">For Sale</span>
-                  <span className="text-sm font-semibold text-slate-900">65%</span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-2">
-                  <div className="bg-emerald-600 h-2 rounded-full" style={{width: '65%'}}></div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600">For Rent</span>
-                  <span className="text-sm font-semibold text-slate-900">35%</span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-2">
-                  <div className="bg-blue-600 h-2 rounded-full" style={{width: '35%'}}></div>
-                </div>
+                {(() => {
+                  const saleCount = chartData.byType.find((t: any) => t.name === 'Sale')?.value || 0
+                  const rentCount = chartData.byType.find((t: any) => t.name === 'Rent')?.value || 0
+                  const total = saleCount + rentCount || 1
+                  const salePct = Math.round((saleCount / total) * 100)
+                  const rentPct = 100 - salePct
+                  return (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-slate-600">For Sale</span>
+                        <span className="text-sm font-semibold text-slate-900">{salePct}% ({saleCount})</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-2">
+                        <div className="bg-emerald-600 h-2 rounded-full" style={{width: `${salePct}%`}}></div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-slate-600">For Rent</span>
+                        <span className="text-sm font-semibold text-slate-900">{rentPct}% ({rentCount})</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-2">
+                        <div className="bg-blue-600 h-2 rounded-full" style={{width: `${rentPct}%`}}></div>
+                      </div>
+                    </>
+                  )
+                })()}
               </div>
             </CardContent>
           </Card>
@@ -499,7 +501,7 @@ export function AdminDashboardClient({ stats, recentListings, chartData }: Admin
                     <div className="flex items-center gap-3 text-xs">
                       <span className="text-slate-600 flex items-center gap-1">
                         <MapPin className="h-3 w-3" />
-                        {listing.phase?.name} • {listing.block?.name}
+                        {listing.area?.name}{listing.project?.name ? ` • ${listing.project.name}` : ''}
                       </span>
                       <span className="text-slate-600 flex items-center gap-1">
                         <Users className="h-3 w-3" />
@@ -583,7 +585,7 @@ export function AdminDashboardClient({ stats, recentListings, chartData }: Admin
                 <div className="flex items-center gap-4 text-sm text-white/80">
                   <span className="flex items-center gap-1">
                     <MapPin className="h-4 w-4" />
-                    {selectedListing.phase?.name} • {selectedListing.block?.name}
+                    {selectedListing.area?.name}{selectedListing.project?.name ? ` • ${selectedListing.project.name}` : ''}
                   </span>
                   <span className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
@@ -609,13 +611,13 @@ export function AdminDashboardClient({ stats, recentListings, chartData }: Admin
                   <div className="bg-slate-50 rounded-lg p-3 text-center">
                     <Home className="h-5 w-5 text-emerald-600 mx-auto mb-1" />
                     <p className="text-xs text-slate-500">Type</p>
-                    <p className="text-sm font-semibold capitalize">{selectedListing.property_type?.replace('_', ' ')}</p>
+                    <p className="text-sm font-semibold capitalize">{selectedListing.property_type?.name || 'N/A'}</p>
                   </div>
                   <div className="bg-slate-50 rounded-lg p-3 text-center">
                     <Store className="h-5 w-5 text-emerald-600 mx-auto mb-1" />
                     <p className="text-xs text-slate-500">Size</p>
                     <p className="text-sm font-semibold">
-                      {selectedListing.plot_size_sqyd || selectedListing.shop_size_sqft} {selectedListing.plot_size_sqyd ? 'Sq. Yds' : 'Sq. Ft'}
+                      {selectedListing.area_size ? `${selectedListing.area_size} ${selectedListing.area_unit}` : 'N/A'}
                     </p>
                   </div>
                   <div className="bg-slate-50 rounded-lg p-3 text-center">

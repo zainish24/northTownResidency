@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     }
 
     const formatted = phone.startsWith('+') ? phone : `+92${phone.replace(/^0/, '')}`
-    const fakeEmail = `${formatted.replace('+', '')}@ntr.app`
+    const fakeEmail = `${formatted.replace('+', '')}@karachi.estates`
 
     const supabase = await createClient()
 
@@ -50,7 +50,11 @@ export async function POST(request: Request) {
       phone: formatted,
       full_name: name,
       role: 'user',
+      user_type: userType || 'individual',
+      agency_name: agencyName || null,
       is_blocked: false,
+      blocked_reason: null,
+      blocked_at: null,
     }, { onConflict: 'id' })
 
     return NextResponse.json({ success: true, session: data.session })

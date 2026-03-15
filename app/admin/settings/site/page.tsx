@@ -129,17 +129,8 @@ export default function SiteSettingsPage() {
   }, [])
 
   const loadNotificationCount = async () => {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { count } = await supabase
-      .from('user_notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .eq('is_read', false)
-    
-    setNotificationCount(count || 0)
+    // user_notifications table removed — skip
+    setNotificationCount(0)
   }
 
   const loadDatabaseStats = async () => {
@@ -183,15 +174,14 @@ export default function SiteSettingsPage() {
 
   const fetchSettings = async () => {
     const supabase = createClient()
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('site_settings')
-      .select('setting_key, setting_value')
+      .select('key, value')
 
     if (data) {
-      // Convert array to object
       const settingsObj: any = {}
       data.forEach(item => {
-        settingsObj[item.setting_key] = item.setting_value || ''
+        settingsObj[item.key] = item.value || ''
       })
       setSettings(prev => ({ ...prev, ...settingsObj }))
     }
@@ -207,17 +197,8 @@ export default function SiteSettingsPage() {
       const updates = Object.entries(settings).map(async ([key, value]) => {
         const { error } = await supabase
           .from('site_settings')
-          .upsert({ 
-            setting_key: key, 
-            setting_value: String(value),
-            label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-            category: 'general'
-          }, { onConflict: 'setting_key' })
-        
-        if (error) {
-          console.error(`Error updating ${key}:`, error)
-          throw error
-        }
+          .upsert({ key, value: String(value) }, { onConflict: 'key' })
+        if (error) throw error
       })
       
       await Promise.all(updates)
