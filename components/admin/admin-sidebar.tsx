@@ -17,7 +17,7 @@ export function AdminSidebar() {
   const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
   const [settings, setSettings] = useState({
-    platform_name: 'NTR Properties',
+    platform_name: 'Karachi Estates',
     tagline: 'Admin Panel',
     logo_url: '',
     primary_color: '#10b981',
@@ -97,18 +97,18 @@ export function AdminSidebar() {
                 <img 
                   src={settings.logo_url} 
                   alt={settings.platform_name} 
-                  className="h-9 w-auto group-hover:scale-105 transition-transform" 
+                  className="h-12 w-auto group-hover:scale-105 transition-transform" 
                 />
               ) : (
                 <div 
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-white shadow-md group-hover:shadow-lg transition-all group-hover:scale-105" 
+                  className="flex h-12 w-12 items-center justify-center rounded-lg text-white shadow-md group-hover:shadow-lg transition-all group-hover:scale-105" 
                   style={{ background: `linear-gradient(to bottom right, ${settings.primary_color}, ${settings.secondary_color})` }}
                 >
-                  <Building2 className="h-4 w-4" />
+                  <Building2 className="h-6 w-6" />
                 </div>
               )}
               <div className="flex flex-col">
-                <span className="font-bold text-sm text-slate-900 leading-tight">{settings.platform_name}</span>
+                <span className="font-bold text-base text-slate-900 leading-tight">{settings.platform_name}</span>
                 <span className="text-[10px] text-slate-500">Admin Panel</span>
               </div>
             </Link>

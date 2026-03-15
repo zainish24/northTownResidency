@@ -1,7 +1,7 @@
 {
-  "name": "NTR Properties - North Town Residency",
-  "short_name": "NTR Properties",
-  "description": "Buy, sell, and rent properties in North Town Residency Karachi",
+  "name": "Karachi Estates",
+  "short_name": "Karachi Estates",
+  "description": "Buy, sell, and rent properties in Karachi. Premium real estate marketplace.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f8f9fa",

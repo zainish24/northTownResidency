@@ -26,12 +26,13 @@ export default function LoginPage() {
     primary_color: '#10b981',
     secondary_color: '#3b82f6',
   })
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
 
   useEffect(() => {
     fetch('/api/settings')
       .then(res => res.json())
-      .then(data => { if (data.settings) setSettings(prev => ({ ...prev, ...data.settings })) })
-      .catch(() => {})
+      .then(data => { if (data.settings) setSettings(prev => ({ ...prev, ...data.settings })); setSettingsLoaded(true) })
+      .catch(() => setSettingsLoaded(true))
   }, [])
 
   useEffect(() => {
@@ -43,41 +44,27 @@ export default function LoginPage() {
 
   const formatPhone = (val: string) => val.replace(/\D/g, '').slice(0, 11)
 
+  const sendOtp = async () => {
+    const res = await fetch('/api/auth/phone-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error)
+    setStep('otp')
+    setResendTimer(60)
+    setTimeout(() => otpRefs.current[0]?.focus(), 100)
+  }
+
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    if (phone.length < 10) {
-      setError('Please enter a valid Pakistani phone number')
-      return
-    }
+    if (phone.length < 10) { setError('Please enter a valid Pakistani phone number'); return }
     setLoading(true)
-    try {
-      // Check if account exists
-      const checkRes = await fetch('/api/auth/phone-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, checkOnly: true }),
-      })
-      const checkData = await checkRes.json()
-      if (!checkRes.ok) throw new Error(checkData.error)
-
-      // Send OTP
-      const res = await fetch('/api/auth/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-
-      setStep('otp')
-      setResendTimer(60)
-      setTimeout(() => otpRefs.current[0]?.focus(), 100)
-    } catch (err: any) {
-      setError(err.message || 'Failed to send OTP')
-    } finally {
-      setLoading(false)
-    }
+    try { await sendOtp() }
+    catch (err: any) { setError(err.message || 'Failed to send OTP') }
+    finally { setLoading(false) }
   }
 
   const handleOtpChange = (index: number, value: string) => {
@@ -104,7 +91,7 @@ export default function LoginPage() {
     if (code.length !== 6) { setError('Please enter the complete 6-digit OTP'); return }
     setLoading(true)
     try {
-      const res = await fetch('/api/auth/verify-otp', {
+      const res = await fetch('/api/auth/phone-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, otp: code }),
@@ -129,19 +116,31 @@ export default function LoginPage() {
   }
 
   const LogoSection = ({ white = false }: { white?: boolean }) => (
-    <div className="flex items-center gap-2">
-      {settings.logo_url ? (
-        <img src={settings.logo_url} alt={settings.platform_name} className="h-10 w-auto" />
+    <div className="flex items-center gap-3">
+      {!settingsLoaded ? (
+        <>
+          <div className={`h-16 w-16 rounded-xl animate-pulse flex-shrink-0 ${white ? 'bg-white/20' : 'bg-slate-200'}`} />
+          <div className="flex flex-col gap-1.5">
+            <div className={`h-5 w-36 rounded animate-pulse ${white ? 'bg-white/20' : 'bg-slate-200'}`} />
+            <div className={`h-3 w-24 rounded animate-pulse ${white ? 'bg-white/10' : 'bg-slate-100'}`} />
+          </div>
+        </>
       ) : (
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-lg"
-          style={{ background: `linear-gradient(to bottom right, ${settings.primary_color}, ${settings.secondary_color})` }}>
-          <Building2 className="h-5 w-5" />
-        </div>
+        <>
+          {settings.logo_url ? (
+            <img src={settings.logo_url} alt={settings.platform_name} className="h-16 w-auto" />
+          ) : (
+            <div className="flex h-16 w-16 items-center justify-center rounded-xl text-white shadow-lg flex-shrink-0"
+              style={{ background: `linear-gradient(to bottom right, ${settings.primary_color}, ${settings.secondary_color})` }}>
+              <Building2 className="h-8 w-8" />
+            </div>
+          )}
+          <div className="flex flex-col">
+            <span className={`font-bold text-xl leading-tight ${white ? 'text-white' : 'text-slate-900'}`}>{settings.platform_name}</span>
+            <span className={`text-xs ${white ? 'text-white/70' : 'text-slate-500'}`}>{settings.tagline}</span>
+          </div>
+        </>
       )}
-      <div className="flex flex-col">
-        <span className={`font-bold text-base leading-tight ${white ? 'text-white' : 'text-slate-900'}`}>{settings.platform_name}</span>
-        <span className={`text-[10px] ${white ? 'text-white/70' : 'text-slate-500'}`}>{settings.tagline}</span>
-      </div>
     </div>
   )
 
@@ -214,7 +213,6 @@ export default function LoginPage() {
                         disabled={loading}
                       />
                     </div>
-                    <p className="text-xs text-slate-500">Enter your registered Pakistani mobile number</p>
                   </div>
 
                   <Button

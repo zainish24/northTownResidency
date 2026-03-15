@@ -1,17 +1,21 @@
 import { NextResponse } from 'next/server'
 import twilio from 'twilio'
 import { createClient } from '@/lib/supabase/server'
+import { createHash } from 'crypto'
 
 const client = twilio(
   process.env.TWILIO_ACCOUNT_SID!,
   process.env.TWILIO_AUTH_TOKEN!
 )
 
+// Secure password — uses secret salt from env, not predictable
 function getCredentials(phone: string) {
   const digits = phone.replace(/\D/g, '')
+  const salt = process.env.AUTH_SECRET || 'ke-default-salt-change-in-prod'
+  const hash = createHash('sha256').update(`${digits}:${salt}`).digest('hex').slice(0, 32)
   return {
     email: `u${digits}@ke.internal`,
-    password: `KE#${digits}#2024!`,
+    password: `KE!${hash}`,
   }
 }
 

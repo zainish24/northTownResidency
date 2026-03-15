@@ -32,12 +32,13 @@ export default function SignupPage() {
     primary_color: '#10b981',
     secondary_color: '#3b82f6',
   })
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
 
   useEffect(() => {
     fetch('/api/settings')
       .then(res => res.json())
-      .then(data => { if (data.settings) setSettings(prev => ({ ...prev, ...data.settings })) })
-      .catch(() => {})
+      .then(data => { if (data.settings) setSettings(prev => ({ ...prev, ...data.settings })); setSettingsLoaded(true) })
+      .catch(() => { setSettingsLoaded(true) })
   }, [])
 
   useEffect(() => {
@@ -133,23 +134,31 @@ export default function SignupPage() {
   }
 
   const LogoSection = ({ white = false }: { white?: boolean }) => (
-    <div className="flex items-center gap-2">
-      {settings.logo_url ? (
-        <img src={settings.logo_url} alt={settings.platform_name} className="h-10 w-auto" />
+    <div className="flex items-center gap-3">
+      {!settingsLoaded ? (
+        <>
+          <div className={`h-16 w-16 rounded-xl animate-pulse flex-shrink-0 ${white ? 'bg-white/20' : 'bg-slate-200'}`} />
+          <div className="flex flex-col gap-1.5">
+            <div className={`h-5 w-36 rounded animate-pulse ${white ? 'bg-white/20' : 'bg-slate-200'}`} />
+            <div className={`h-3 w-24 rounded animate-pulse ${white ? 'bg-white/10' : 'bg-slate-100'}`} />
+          </div>
+        </>
       ) : (
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-lg"
-          style={{ background: `linear-gradient(to bottom right, ${settings.primary_color}, ${settings.secondary_color})` }}>
-          <Building2 className="h-5 w-5" />
-        </div>
+        <>
+          {settings.logo_url ? (
+            <img src={settings.logo_url} alt={settings.platform_name} className="h-16 w-auto" />
+          ) : (
+            <div className="flex h-16 w-16 items-center justify-center rounded-xl text-white shadow-lg flex-shrink-0"
+              style={{ background: `linear-gradient(to bottom right, ${settings.primary_color}, ${settings.secondary_color})` }}>
+              <Building2 className="h-8 w-8" />
+            </div>
+          )}
+          <div className="flex flex-col">
+            <span className={`font-bold text-xl leading-tight ${white ? 'text-white' : 'text-slate-900'}`}>{settings.platform_name}</span>
+            <span className={`text-xs ${white ? 'text-white/70' : 'text-slate-500'}`}>{settings.tagline}</span>
+          </div>
+        </>
       )}
-      <div className="flex flex-col">
-        <span className={`font-bold text-base leading-tight ${white ? 'text-white' : 'text-slate-900'}`}>
-          {settings.platform_name}
-        </span>
-        <span className={`text-[10px] ${white ? 'text-white/70' : 'text-slate-500'}`}>
-          {settings.tagline}
-        </span>
-      </div>
     </div>
   )
 

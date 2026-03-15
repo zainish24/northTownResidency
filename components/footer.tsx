@@ -63,23 +63,23 @@ export function Footer() {
               <div className="flex items-center gap-2">
                 {!settingsLoaded ? (
                   <>
-                    <div className="h-10 w-10 rounded-xl bg-slate-200 animate-pulse" />
+                    <div className="h-12 w-12 rounded-xl bg-slate-200 animate-pulse" />
                     <div className="flex flex-col gap-1">
-                      <div className="h-4 w-28 bg-slate-200 rounded animate-pulse" />
-                      <div className="h-2.5 w-20 bg-slate-100 rounded animate-pulse" />
+                      <div className="h-4 w-32 bg-slate-200 rounded animate-pulse" />
+                      <div className="h-2.5 w-24 bg-slate-100 rounded animate-pulse" />
                     </div>
                   </>
                 ) : (
                   <>
                     {settings.logo_url ? (
-                      <img src={settings.logo_url} alt={settings.platform_name} className="h-10 w-auto group-hover:scale-105 transition-transform" />
+                      <img src={settings.logo_url} alt={settings.platform_name} className="h-16 w-auto group-hover:scale-105 transition-transform" />
                     ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-600 to-blue-600 text-white shadow-lg group-hover:scale-105 transition-transform">
-                        <Building2 className="h-5 w-5" />
+                      <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-600 to-blue-600 text-white shadow-lg group-hover:scale-105 transition-transform">
+                        <Building2 className="h-8 w-8" />
                       </div>
                     )}
                     <div>
-                      <span className="font-bold text-lg text-slate-900 block">{settings.platform_name || 'Karachi Estates'}</span>
+                      <span className="font-bold text-base text-slate-900 block">{settings.platform_name || 'Karachi Estates'}</span>
                       <span className="text-[10px] text-slate-500">{settings.tagline || 'Karachi Real Estate'}</span>
                     </div>
                   </>

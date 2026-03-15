@@ -152,22 +152,22 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
+          <Link href="/" className="flex items-center gap-3 group">
             {!settingsLoaded ? (
               <>
-                <div className="h-10 w-10 rounded-xl bg-slate-200 animate-pulse" />
+                <div className="h-16 w-16 rounded-xl bg-slate-200 animate-pulse" />
                 <div className="flex flex-col gap-1">
-                  <div className="h-4 w-28 bg-slate-200 rounded animate-pulse" />
-                  <div className="h-2.5 w-20 bg-slate-100 rounded animate-pulse" />
+                  <div className="h-4 w-32 bg-slate-200 rounded animate-pulse" />
+                  <div className="h-2.5 w-24 bg-slate-100 rounded animate-pulse" />
                 </div>
               </>
             ) : (
               <>
                 {settings.logo_url ? (
-                  <img src={settings.logo_url} alt={settings.platform_name || 'Karachi Estates'} className="h-10 w-auto group-hover:scale-105 transition-transform" />
+                  <img src={settings.logo_url} alt={settings.platform_name || 'Karachi Estates'} className="h-16 w-auto group-hover:scale-105 transition-transform" />
                 ) : (
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-lg group-hover:shadow-xl transition-all group-hover:scale-105" style={{ background: `linear-gradient(to bottom right, ${settings.primary_color}, ${settings.secondary_color || '#3b82f6'})` }}>
-                    <Building2 className="h-5 w-5" />
+                  <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-lg group-hover:shadow-xl transition-all group-hover:scale-105" style={{ background: `linear-gradient(to bottom right, ${settings.primary_color}, ${settings.secondary_color || '#3b82f6'})` }}>
+                    <Building2 className="h-8 w-8" />
                   </div>
                 )}
                 <div className="flex flex-col">
