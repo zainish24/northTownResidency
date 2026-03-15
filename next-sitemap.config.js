@@ -13,6 +13,12 @@ module.exports = {
     '/auth/*',
     '/api/*',
   ],
+  additionalPaths: async (config) => [
+    { loc: '/', changefreq: 'daily', priority: 1.0 },
+    { loc: '/listings', changefreq: 'daily', priority: 0.9 },
+    { loc: '/auth/login', changefreq: 'monthly', priority: 0.5 },
+    { loc: '/auth/signup', changefreq: 'monthly', priority: 0.5 },
+  ],
   robotsTxtOptions: {
     policies: [
       { userAgent: '*', allow: '/' },
