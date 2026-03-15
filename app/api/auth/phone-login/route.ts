@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createHash } from 'crypto'
 import twilio from 'twilio'
 
 const twilioClient = twilio(
@@ -8,19 +7,9 @@ const twilioClient = twilio(
   process.env.TWILIO_AUTH_TOKEN!
 )
 
-function getCredentials(phone: string) {
-  const digits = phone.replace(/\D/g, '')
-  const salt = process.env.AUTH_SECRET || 'ke-default-salt-change-in-prod'
-  const hash = createHash('sha256').update(`${digits}:${salt}`).digest('hex').slice(0, 32)
-  return {
-    email: `u${digits}@ke.internal`,
-    password: `KE!${hash}`,
-  }
-}
-
 export async function POST(request: Request) {
   try {
-    const { phone, checkOnly, otp } = await request.json()
+    const { phone, otp } = await request.json()
     if (!phone) return NextResponse.json({ error: 'Phone number required' }, { status: 400 })
 
     const formatted = phone.startsWith('+') ? phone : `+92${phone.replace(/^0/, '')}`
@@ -37,12 +26,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No account found. Please sign up first.' }, { status: 404 })
     }
 
-    // Step 1: Just check existence
-    if (checkOnly) {
-      return NextResponse.json({ success: true, exists: true })
-    }
-
-    // Step 2: Verify OTP then login
+    // If OTP provided — verify it
     if (otp) {
       try {
         const result = await twilioClient.verify.v2
@@ -57,13 +41,26 @@ export async function POST(request: Request) {
         throw e
       }
 
-      const { email, password } = getCredentials(formatted)
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) return NextResponse.json({ error: 'Login failed. Please try again.' }, { status: 400 })
-      return NextResponse.json({ success: true, session: data.session })
+      // OTP verified — sign in via Supabase phone auth
+      const { data, error } = await supabase.auth.signInWithOtp({
+        phone: formatted,
+      })
+
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+      // Verify OTP with Supabase to get session
+      const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+        phone: formatted,
+        token: otp,
+        type: 'sms',
+      })
+
+      if (verifyError) return NextResponse.json({ error: verifyError.message }, { status: 400 })
+
+      return NextResponse.json({ success: true, session: verifyData.session })
     }
 
-    // Step 3: Send OTP
+    // No OTP — send OTP via Twilio
     try {
       const verification = await twilioClient.verify.v2
         .services(process.env.TWILIO_VERIFY_SERVICE_SID!)
